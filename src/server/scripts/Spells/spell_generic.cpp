@@ -3070,6 +3070,76 @@ class spell_gen_spectator_cheer_trigger : public SpellScript
     }
 };
 
+class spell_raidbuff_test_aura : public SpellScriptLoader
+{
+public:
+    spell_raidbuff_test_aura() : SpellScriptLoader("spell_raidbuff_test_aura") { }
+
+    class spell_raidbuff_test_aura_AuraScript : public AuraScript
+    {
+        PrepareAuraScript(spell_raidbuff_test_aura_AuraScript);
+
+    private:
+        //List of raid buffs
+        std::vector<int> raidBuffIds = { 21850, 24932, 25916, 25898, 19506, 75447, 24907, 8515, 57565, 58646, 52113 };
+
+        bool Validate(SpellInfo const* /*spellInfo*/) override
+        {
+            //Checks to make sure there are no typos or invalid spells in the buff list
+            for (auto const& value : raidBuffIds)
+            {
+                if (!sSpellMgr->GetSpellInfo(value))
+                    return false;
+            }
+
+            return true;
+        }
+
+        void OnCastedSpell(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            if (!GetCaster())
+                return;
+
+            for (auto const& value : raidBuffIds)
+            {
+                CastRaidBuff(value);
+            }
+        }
+
+        void OnSpellRemoved(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
+        {
+            if (!GetCaster())
+                return;
+
+            for (auto const& value : raidBuffIds)
+            {
+                RemoveRaidBuff(value);
+            }
+        }
+
+        void CastRaidBuff(int buffId)
+        {
+            GetCaster()->CastSpell(GetCaster(), buffId, true);
+        }
+
+        void RemoveRaidBuff(int buffId)
+        {
+            GetCaster()->RemoveAura(buffId);
+        }
+
+        void Register() override
+        {
+            AfterEffectApply += AuraEffectApplyFn(spell_raidbuff_test_aura_AuraScript::OnCastedSpell, EFFECT_0, SPELL_AURA_X_RAY, AURA_EFFECT_HANDLE_REAL);
+            AfterEffectRemove += AuraEffectRemoveFn(spell_raidbuff_test_aura_AuraScript::OnSpellRemoved, EFFECT_0, SPELL_AURA_X_RAY, AURA_EFFECT_HANDLE_REAL);
+        }
+    };
+
+    AuraScript* GetAuraScript() const override
+    {
+        return new spell_raidbuff_test_aura_AuraScript();
+    }
+};
+
 class spell_gen_spirit_healer_res : public SpellScript
 {
     PrepareSpellScript(spell_gen_spirit_healer_res);
@@ -4049,6 +4119,7 @@ class spell_gen_pony_mount_check : public AuraScript
 
 void AddSC_generic_spell_scripts()
 {
+    new spell_raidbuff_test_aura();
     RegisterAuraScript(spell_gen_absorb0_hitlimit1);
     RegisterAuraScript(spell_gen_adaptive_warding);
     RegisterSpellScript(spell_gen_allow_cast_from_item_only);
