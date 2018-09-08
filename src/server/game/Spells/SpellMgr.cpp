@@ -4797,6 +4797,13 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_1].RadiusEntry = sSpellRadiusStore.LookupEntry(EFFECT_RADIUS_3_YARDS); // 3yd
     });
 
+    // 28282 Corrupted Ashbringer.
+    ApplySpellFix({ 28282 }, [](SpellInfo* spellInfo)
+    {
+        //Makes it so the buff cannot be canceled.
+        spellInfo->Attributes |= SPELL_ATTR0_CANT_CANCEL;
+    });
+
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)
     {
         SpellInfo* spellInfo = mSpellInfoMap[i];
