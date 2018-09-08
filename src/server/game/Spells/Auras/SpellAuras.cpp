@@ -130,6 +130,13 @@ void AuraApplication::_InitFlags(Unit* caster, uint8 effMask)
     // mark as selfcast if needed
     _flags |= (GetBase()->GetCasterGUID() == GetTarget()->GetGUID()) ? AFLAG_CASTER : AFLAG_NONE;
 
+    // CUSTOM: Force positive
+    if (_base->GetSpellInfo()->HasAttribute(SPELL_ATTR0_CU_FORCE_POSITIVE))
+    {
+        _flags |= AFLAG_POSITIVE;
+        return;
+    }
+
     // aura is cast by self or an enemy
     // one negative effect and we know aura is negative
     if (IsSelfcast() || !caster || !caster->IsFriendlyTo(GetTarget()))
