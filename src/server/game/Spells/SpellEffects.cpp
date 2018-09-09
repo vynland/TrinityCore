@@ -5610,8 +5610,9 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
             pos = unitCaster->GetRandomPoint(*destTarget, radius);
 
         TempSummon* summon = map->SummonCreature(entry, pos, properties, duration, unitCaster, m_spellInfo->Id);
+        //We should continue trying to summon, not give up.
         if (!summon)
-            return;
+            continue;
 
         if (summon->HasUnitTypeMask(UNIT_MASK_GUARDIAN))
             ((Guardian*)summon)->InitStatsForLevel(level);
@@ -5636,6 +5637,13 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const* 
         summon->AI()->EnterEvadeMode();
 
         ExecuteLogEffectSummonObject(i, summon);
+
+        //TODO: Is this the best place to init the owner GUID? summon->Create will call ThreatManager initialize but if we do this before it causes crashes
+        if (unitCaster)
+            ((Unit*)summon)->SetOwnerGUID(unitCaster->GetGUID());
+
+        //Reinitialize the threatmanager so that it considers the ownerguid in calculations. Should be safe to call again
+        summon->GetThreatManager().Initialize();
     }
 }
 
