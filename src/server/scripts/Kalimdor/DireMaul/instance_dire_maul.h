@@ -111,13 +111,38 @@ inline void DisableUnit(Unit* const unit)
     unit->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 }
 
+//The default condition is always ready for invokation.
+class InstanceEventCondition
+{
+public:
+    InstanceEventCondition() { }
 
-template<typename TEventInvoker>
+    static InstanceEventCondition const Default;
+
+    //Indicates if the event is ready to be dispatched.
+    virtual bool IsEventReady() const
+    {
+        return true;
+    }
+
+    virtual void Process(ObjectGuid invoker)
+    {
+        //Default is always true so do nothing.
+        return;
+    }
+};
+
+//TODO: Should this be here?
+InstanceEventCondition const InstanceEventCondition::Default = InstanceEventCondition();
+
+
+//TODO: We want to support many types of patterns seen in instances.
 class InstanceEventInvokable
 {
 public:
-    typedef void (InstanceScript::*InstanceEventInvokerFunction)(TEventInvoker);
+    typedef void (InstanceScript::*InstanceEventInvokerFunction)(ObjectGuid);
 
+    //The target callback for the event, should accept a guid value, and the target instance.
     InstanceEventInvokable(const InstanceEventInvokerFunction invokable, InstanceScript* capturedTarget)
     {
         ASSERT(invokable != nullptr);
@@ -126,15 +151,96 @@ public:
         CapturedTarget = capturedTarget;
     }
 
-    void Invoke(TEventInvoker invoker) const
+    //The invoker should be that guid of the object that cause the event to happen.
+    void Invoke(ObjectGuid invoker) const
     {
-        ASSERT(invoker != nullptr);
+        ASSERT(!invoker.IsEmpty());
         (CapturedTarget->*Invokable)(invoker);
     }
 
 private:
     InstanceEventInvokerFunction Invokable;
     InstanceScript* CapturedTarget;
+};
+
+class InstanceEventRegisteration
+{
+public:
+    InstanceEventRegisteration(InstanceEventCondition condition, InstanceEventInvokable invokable)
+        : Invokable(invokable),
+        Condition(condition)
+    {
+
+    }
+
+    InstanceEventCondition GetCondition() const
+    {
+        return Condition;
+    }
+
+    InstanceEventInvokable GetInvokable() const
+    {
+        return Invokable;
+    }
+
+private:
+    InstanceEventCondition Condition;
+    InstanceEventInvokable Invokable;
+};
+
+
+class InstanceEventRegister
+{
+public:
+    //Registers an event with the given registeration data associated with the provided GUID.
+    virtual void RegisterEvent(ObjectGuid invoker, InstanceEventRegisteration registerationData) = 0;
+
+    //TODO: Support a shared registeration between multiple invokes (like a group of NPCs that all must die before an event fires)
+};
+
+class InstanceEventProcessor
+{
+public:
+    //Should be called to process a potential event.
+    //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
+    virtual void ProcessEvent(ObjectGuid potentialInvoker) = 0;
+};
+
+class InstanceEventManager : public InstanceEventProcessor, public InstanceEventRegister
+{
+public:
+    void RegisterEvent(ObjectGuid invoker, InstanceEventRegisteration registerationData)
+    {
+        //TODO: Check if an event is already registered, handle it somehow. Maybe throw?
+        ListenerMap.insert(std::make_pair(invoker, registerationData));
+    }
+
+    //Should be called to process a potential event.
+    //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
+    void ProcessEvent(ObjectGuid potentialInvoker)
+    {
+        auto i = ListenerMap.find(potentialInvoker);
+        if (i != ListenerMap.end())
+        {
+            InstanceEventRegisteration eventData = (*i).second;
+
+            //The concept here is that conditions must be met sometimes for an event to be invokable.
+            //Just because an event involving the above GUID occured doesn't mean there are any listeners
+            //or if the listener coniditions for the event to fire have been met. So we need to give a chance for the Condition
+            //object to handle a new interesting event, with the idea to IsEventReady will eventually be true and firable.
+            eventData.GetCondition().Process(potentialInvoker);
+
+            //TODO: Handle deregisteration maybe, handle reregisteration too.
+            //Now we can check if the conditions have been met. If they are we can fire the event.
+            if (eventData.GetCondition().IsEventReady())
+                eventData.GetInvokable().Invoke(potentialInvoker);
+        }
+
+        //We don't really need to say anything so we return nothing. Though maybe we want to share some details in the future to callers.
+    }
+
+private:
+    std::map<ObjectGuid, InstanceEventRegisteration> ListenerMap;
 };
 
 //This version exists because you may want to have a vector of GUID instead of GUID
@@ -278,6 +384,12 @@ public:
         }
     }
 
+    void OnUnitDeath(Unit* u) override
+    {
+        //When a unit dies we must alert the related event managers
+        //They may or may not dispatch an event related to it but it's constant time to check if one can be dispatched.
+    }
+
     void OnGameObjectCreate(GameObject* go) override
     {
         GameObjectEntryToGuidMap.Insert(ConvertToEntry(go), go->GetGUID());
@@ -289,10 +401,28 @@ protected:
         return BossEntryToGuidMap;
     }
 
-    const ReadonlyInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GetGameObjectContainer() const
+    const ReadonlyInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GetGameObjectEntryContainer() const
     {
         return GameObjectEntryToGuidMap;
     }
+
+    const DefaultInstanceObjectEntryGuidListLookupContainer<TNpcEntryEnumType> GetNpcEntryContainer() const
+    {
+        return NpcEntryToGuidsMap;
+    }
+
+    //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
+    template<typename TFunctionPointerType>
+    void RegisterOnBossCreatureDeathEvent(DireMaulBossEntry entry, TFunctionPointerType functionPointer)
+    {
+        //TODO: Check if guid for entry exists.
+        
+        ObjectGuid guid = GetBossEntryContainer().FindByEntry(entry);
+        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer), this);
+        BossDeathEventManager.RegisterEvent(guid, InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
+    }
+
+    //TODO: Add instance even registeration exposed via polymorphic getter.
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
     TGameObjectEntryType ConvertToEntry(GameObject* go)
@@ -308,6 +438,9 @@ private:
 
     //NPC entries may be duplicated throughout the instance but may have multiple instances of the NPC. The GUID identifies them, that is why we use a collection.
     DefaultInstanceObjectEntryGuidListLookupContainer<TNpcEntryEnumType> NpcEntryToGuidsMap;
+
+    //Event managers. Concept here is we have multiple managers and one for each event type.
+    InstanceEventManager BossDeathEventManager;
 };
 
 #endif
