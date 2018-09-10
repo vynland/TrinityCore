@@ -93,3 +93,6 @@ enum DireMaulBossEntry
     NPC_CHORUSH = 14324,
     NPC_KING_GORDOK = 11501,
 };
+
+int const DIREMAUL_BOSS_COUNT = 17;
+
