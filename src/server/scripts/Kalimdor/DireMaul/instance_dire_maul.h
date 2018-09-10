@@ -112,6 +112,144 @@ inline void DisableUnit(Unit* const unit)
 }
 
 
+template<typename TEventInvoker>
+class InstanceEventInvokable
+{
+public:
+    typedef void (InstanceScript::*InstanceEventInvokerFunction)(TEventInvoker);
+
+    InstanceEventInvokable(const InstanceEventInvokerFunction invokable, InstanceScript* capturedTarget)
+    {
+        ASSERT(invokable != nullptr);
+        ASSERT(capturedTarget != nullptr);
+        Invokable = invokable;
+        CapturedTarget = capturedTarget;
+    }
+
+    void Invoke(TEventInvoker invoker) const
+    {
+        ASSERT(invoker != nullptr);
+        (CapturedTarget->*Invokable)(invoker);
+    }
+
+private:
+    InstanceEventInvokerFunction Invokable;
+    InstanceScript* CapturedTarget;
+};
+
+//This version exists because you may want to have a vector of GUID instead of GUID
+template<typename StorageType, typename TEntryEnumType>
+class ReadonlyInstanceObjectEntryLookupContainer
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    ReadonlyInstanceObjectEntryLookupContainer() { }
+
+    //Returns the StorageType associated with an entry. It should return Empty if none are found.
+    virtual StorageType FindByEntry(TEntryEnumType entry) const = 0;
+};
+
+template<typename TEntryEnumType>
+class ReadonlyInstanceObjectEntryGuidLookupContainer : public ReadonlyInstanceObjectEntryLookupContainer<ObjectGuid, TEntryEnumType>
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    ReadonlyInstanceObjectEntryGuidLookupContainer() { }
+
+    //TODO: We may want to expose a way to iterate all GUIDs.
+};
+
+template<typename StorageType, typename TEntryEnumType>
+class MutableInstanceObjectEntryLookupContainer
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    MutableInstanceObjectEntryLookupContainer() { }
+
+    virtual bool Insert(TEntryEnumType entry, StorageType storageValue) = 0;
+};
+
+template<typename TEntryEnumType>
+class MutableInstanceObjectEntryGuidLookupContainer : MutableInstanceObjectEntryLookupContainer<ObjectGuid, TEntryEnumType>
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    MutableInstanceObjectEntryGuidLookupContainer() { }
+};
+
+template<typename TEntryEnumType>
+class DefaultInstanceObjectEntryGuidLookupContainer : public MutableInstanceObjectEntryGuidLookupContainer<TEntryEnumType>, public ReadonlyInstanceObjectEntryGuidLookupContainer<TEntryEnumType>
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    //We could have gone the specialization route but having simplied/aliased types as interface/purvirtual seemed cleaner.
+    ObjectGuid FindByEntry(TEntryEnumType entry) const
+    {
+        auto f = InternalMap.find(entry);
+        if (f != InternalMap.end())
+            return (*f).second;
+        else
+            return ObjectGuid::Empty;
+    }
+
+    bool Insert(TEntryEnumType entry, ObjectGuid storageValue)
+    {
+        //TODO: Do some checking for if it's already present.
+        InternalMap.emplace(std::make_pair(entry, storageValue));
+        return true;
+    }
+
+private:
+    std::map<TEntryEnumType, ObjectGuid> InternalMap;
+};
+
+template<typename TEntryEnumType>
+class DefaultInstanceObjectEntryGuidListLookupContainer : public MutableInstanceObjectEntryLookupContainer<std::vector<ObjectGuid>, TEntryEnumType>, public ReadonlyInstanceObjectEntryLookupContainer<std::vector<ObjectGuid>, TEntryEnumType>
+{
+    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
+
+public:
+    //We could have gone the specialization route but having simplied/aliased types as interface/purvirtual seemed cleaner.
+    std::vector<ObjectGuid> FindByEntry(TEntryEnumType entry) const
+    {
+        if (InternalMap.find(entry) != InternalMap.end())
+            return InternalMap.at(entry);
+        else
+            return std::vector<ObjectGuid>(); //ODO: Add a Contains method so callers can check that so we don't have to return empty vectors often.
+    }
+
+    //TODO: Any way with templates to not have to duplicate this method?
+    bool Insert(TEntryEnumType entry, std::vector<ObjectGuid> storageValue)
+    {
+        //TODO: Do some checking for if it's already present.
+        InternalMap.emplace(std::make_pair(entry, storageValue));
+        return true;
+    }
+
+    //This allows for the insertion of a single guid. Will create a vector if it doesn't exist.
+    bool Insert(TEntryEnumType entry, ObjectGuid singleGuid)
+    {
+        //TODO: Do some checking for if it's already present.
+        //TODO: Extract to a contains method
+        if (InternalMap.find(entry) != InternalMap.end())
+        {
+            InternalMap.at(entry).push_back(singleGuid);
+        }
+        else
+            return Insert(entry, std::vector<ObjectGuid> { singleGuid });
+
+        return true;
+    }
+
+private:
+    std::map<TEntryEnumType, std::vector<ObjectGuid>> InternalMap;
+};
+
 //TODO: Extract into seperate 
 template<typename TBossEntryEnumType, typename TGameObjectEntryType, typename TNpcEntryEnumType>
 struct ImprovedInstanceScript : public InstanceScript
@@ -122,60 +260,53 @@ public:
        
     }
 
-    const std::map<const TBossEntryEnumType, const ObjectGuid> GetBossEntryToGuidMap() const
-    {
-        return BossEntryToGuidMap;
-    }
-
-    const std::map<const TGameObjectEntryType, const ObjectGuid> GetGameObjectEntryToGuidMap() const
-    {
-        return GameObjectEntryToGuidMap;
-    }
-
     // Called when a creature/gameobject is added to map or removed from map.
     // Insert/Remove objectguid to dynamic guid store
     void OnCreatureCreate(Creature* creature) override
     {
+        InstanceScript::OnCreatureCreate(creature);
+
         const int entry = creature->GetEntry();
 
         //TODO: Is this good enough?
         if (creature->IsDungeonBoss())
-            InsertIntoMap<TBossEntryEnumType>(BossEntryToGuidMap, const_cast<Object*>(static_cast<Object*>(creature)));
+            this->BossEntryToGuidMap.Insert(static_cast<TBossEntryEnumType>(entry), creature->GetGUID());
         else
         {
-            const TNpcEntryEnumType npcEntry = static_cast<TNpcEntryEnumType>(entry);
-
-            //If the NPC entry already exists we should push the entry into the vector
-            if (NpcEntryToGuidsMap.find(npcEntry) != NpcEntryToGuidsMap.end())
-            {
-                NpcEntryToGuidsMap.at(npcEntry).push_back(creature->GetGUID());
-            }
-            else
-            {
-                std::vector<ObjectGuid> initialVector { creature->GetGUID() };
-                NpcEntryToGuidsMap.emplace(std::make_pair(npcEntry, initialVector));
-            }
+            this->NpcEntryToGuidsMap.Insert(static_cast<TNpcEntryEnumType>(entry), creature->GetGUID());
         }
-        //TODO: Else put regular creatures in their own map.
     }
 
     void OnGameObjectCreate(GameObject* go) override
     {
-        InsertIntoMap<TGameObjectEntryType>(GameObjectEntryToGuidMap, const_cast<Object*>(static_cast<Object*>(go)));
+        GameObjectEntryToGuidMap.Insert(ConvertToEntry(go), go->GetGUID());
     }
 
-    template<typename TEnumType>
-    void InsertIntoMap(std::map<TEnumType, ObjectGuid>& map, const Object* const unit)
+protected:
+    const ReadonlyInstanceObjectEntryGuidLookupContainer<TBossEntryEnumType> GetBossEntryContainer() const
     {
-        map.emplace(std::make_pair(static_cast<TEnumType>(unit->GetEntry()), unit->GetGUID()));
+        return BossEntryToGuidMap;
+    }
+
+    const ReadonlyInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GetGameObjectContainer() const
+    {
+        return GameObjectEntryToGuidMap;
+    }
+
+    //TODO: Should these methods be apart of the instancescript? Or another object?
+    TGameObjectEntryType ConvertToEntry(GameObject* go)
+    {
+        ASSERT(go);
+        return static_cast<TGameObjectEntryType>(go->GetEntry());
     }
 
 private:
-    std::map<TBossEntryEnumType, ObjectGuid> BossEntryToGuidMap;
-    std::map<TGameObjectEntryType, ObjectGuid> GameObjectEntryToGuidMap;
+    //TODO: Rename
+    DefaultInstanceObjectEntryGuidLookupContainer<TBossEntryEnumType> BossEntryToGuidMap;
+    DefaultInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GameObjectEntryToGuidMap;
 
     //NPC entries may be duplicated throughout the instance but may have multiple instances of the NPC. The GUID identifies them, that is why we use a collection.
-    std::map<TNpcEntryEnumType, std::vector<ObjectGuid>> NpcEntryToGuidsMap;
+    DefaultInstanceObjectEntryGuidListLookupContainer<TNpcEntryEnumType> NpcEntryToGuidsMap;
 };
 
 #endif
