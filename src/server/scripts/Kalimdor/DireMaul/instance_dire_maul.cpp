@@ -25,48 +25,55 @@ gets instead the deserter debuff.
 #include "ScriptMgr.h"
 #include "InstanceScript.h"
 #include "Map.h"
-
-// Bosses (East)
-// 0 - Pusillin
-// 1 - Lethtendris
-// 2 - Hydrospawn
-// 3 - Zevrim Thornhoof
-// 4 - Alzzin the Wildshaper
-
-// West
-// 5 - Tendris Warpwood
-// 6 - Magister Kalendris
-// 7 - Tsu'zee
-// 8 - Illyanna Ravenoak
-// 9 - Immol'thar
-// 10 - Prince Tortheldrin
-
-// North
-// 11 - Guard Mol'dar
-// 12 - Stomper Kreeg
-// 13 - Guard Fengus
-// 14 - Guard Slip'kik
-// 15 - Captain Kromcrush
-// 16 - King Gordok
-
-uint8 const EncounterCount = 17;
+#include "instance_dire_maul.h"
+#include "Log.h"
+#include "GameObject.h"
 
 class instance_dire_maul : public InstanceMapScript
 {
 public:
-    instance_dire_maul() : InstanceMapScript("instance_dire_maul", 429) { }
-
-    struct instance_dire_maul_InstanceMapScript : public InstanceScript
-    {
-        instance_dire_maul_InstanceMapScript(Map* map) : InstanceScript(map)
-        {
-            SetBossNumber(EncounterCount);
-        }
-    };
+    instance_dire_maul() : InstanceMapScript(DireMaulScriptName, 429) { }
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override
     {
         return new instance_dire_maul_InstanceMapScript(map);
+    }
+
+    struct instance_dire_maul_InstanceMapScript : public ImprovedInstanceScript<DireMaulBossEntry, DireMaulGameObjectEntry, DireMaulNpcEntry>
+    {
+        instance_dire_maul_InstanceMapScript(Map* map) : ImprovedInstanceScript(map)
+        {
+            SetBossNumber(DIREMAUL_BOSS_COUNT);
+        }
+
+        void OnUnitDeath(Unit* u) override
+        {
+            if (u->GetEntry() == DireMaulNpcEntry::NPC_RESTE_MANA || u->GetEntry() == DireMaulNpcEntry::NPC_ARCANE_ABERRATION)
+            {
+                OnPylonGuardianDeath(u->GetEntry());
+            }
+        }
+
+        void OnPylonGuardianDeath(const int guardianEntry)
+        {
+
+        }
+
+        void OnCreatureRemove(Creature* creature) override
+        {
+
+        }
+    };
+
+    void OnPlayerEnter(InstanceMap* /*map*/, Player* /*player*/) override
+    {
+        //Lighthope has some recommended stuff they do on enter and leave to prevent some exploits.
+    }
+
+    // Called when a player leaves the map.
+    void OnPlayerLeave(InstanceMap* /*map*/, Player* /*player*/) override
+    {
+        //Lighthope has some recommended stuff they do on enter and leave to prevent some exploits.
     }
 };
 
