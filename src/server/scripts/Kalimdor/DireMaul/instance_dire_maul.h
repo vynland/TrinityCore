@@ -96,3 +96,86 @@ enum DireMaulBossEntry
 
 int const DIREMAUL_BOSS_COUNT = 17;
 
+//TODO: Unify some of thise stuff in a shared instance header for use throughout the project.
+//Based on VMangos
+inline void EnableUnit(Unit* const unit)
+{
+    unit->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+    unit->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+}
+
+//Based on VMangos
+inline void DisableUnit(Unit* const unit)
+{
+    unit->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+    unit->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+}
+
+
+//TODO: Extract into seperate 
+template<typename TBossEntryEnumType, typename TGameObjectEntryType, typename TNpcEntryEnumType>
+struct ImprovedInstanceScript : public InstanceScript
+{
+public:
+    ImprovedInstanceScript(Map* map) : InstanceScript(map)
+    {
+       
+    }
+
+    const std::map<const TBossEntryEnumType, const ObjectGuid> GetBossEntryToGuidMap() const
+    {
+        return BossEntryToGuidMap;
+    }
+
+    const std::map<const TGameObjectEntryType, const ObjectGuid> GetGameObjectEntryToGuidMap() const
+    {
+        return GameObjectEntryToGuidMap;
+    }
+
+    // Called when a creature/gameobject is added to map or removed from map.
+    // Insert/Remove objectguid to dynamic guid store
+    void OnCreatureCreate(Creature* creature) override
+    {
+        const int entry = creature->GetEntry();
+
+        //TODO: Is this good enough?
+        if (creature->IsDungeonBoss())
+            InsertIntoMap<TBossEntryEnumType>(BossEntryToGuidMap, const_cast<Object*>(static_cast<Object*>(creature)));
+        else
+        {
+            const TNpcEntryEnumType npcEntry = static_cast<TNpcEntryEnumType>(entry);
+
+            //If the NPC entry already exists we should push the entry into the vector
+            if (NpcEntryToGuidsMap.find(npcEntry) != NpcEntryToGuidsMap.end())
+            {
+                NpcEntryToGuidsMap.at(npcEntry).push_back(creature->GetGUID());
+            }
+            else
+            {
+                std::vector<ObjectGuid> initialVector { creature->GetGUID() };
+                NpcEntryToGuidsMap.emplace(std::make_pair(npcEntry, initialVector));
+            }
+        }
+        //TODO: Else put regular creatures in their own map.
+    }
+
+    void OnGameObjectCreate(GameObject* go) override
+    {
+        InsertIntoMap<TGameObjectEntryType>(GameObjectEntryToGuidMap, const_cast<Object*>(static_cast<Object*>(go)));
+    }
+
+    template<typename TEnumType>
+    void InsertIntoMap(std::map<TEnumType, ObjectGuid>& map, const Object* const unit)
+    {
+        map.emplace(std::make_pair(static_cast<TEnumType>(unit->GetEntry()), unit->GetGUID()));
+    }
+
+private:
+    std::map<TBossEntryEnumType, ObjectGuid> BossEntryToGuidMap;
+    std::map<TGameObjectEntryType, ObjectGuid> GameObjectEntryToGuidMap;
+
+    //NPC entries may be duplicated throughout the instance but may have multiple instances of the NPC. The GUID identifies them, that is why we use a collection.
+    std::map<TNpcEntryEnumType, std::vector<ObjectGuid>> NpcEntryToGuidsMap;
+};
+
+#endif
