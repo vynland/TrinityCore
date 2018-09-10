@@ -217,8 +217,9 @@ public:
     //We could have gone the specialization route but having simplied/aliased types as interface/purvirtual seemed cleaner.
     std::vector<ObjectGuid> FindByEntry(TEntryEnumType entry) const
     {
-        if (InternalMap.find(entry) != InternalMap.end())
-            return InternalMap.at(entry);
+        auto f = InternalMap.find(entry);
+        if (f != InternalMap.end())
+            return (*f).second;
         else
             return std::vector<ObjectGuid>(); //ODO: Add a Contains method so callers can check that so we don't have to return empty vectors often.
     }
