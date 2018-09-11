@@ -32,9 +32,6 @@ public:
             //To handle the logic of a pylon we need to compose conditions based around SpawnIds and
             //register seperate linked events between the two Elemental entries
 
-            //THis tally goal is shared between them because we have multiple types of NPCs that contribute to the tally for this event
-            std::shared_ptr<SharedTallyConditionDecorator::TallyGoal> goal(new SharedTallyConditionDecorator::TallyGoal(4));
-
             //don
             //TODO: Use static vectors since they never change value.
             //Registers a group of NPCs associated with a pylon. The shared goal of killing all of them represented by the tally goal
