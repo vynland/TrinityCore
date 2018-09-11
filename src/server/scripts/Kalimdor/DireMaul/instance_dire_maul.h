@@ -319,6 +319,11 @@ class ObjectEntryLookupContainer
 public:
     ObjectEntryLookupContainer() { }
 
+    bool ContainsKey(TEntryEnumType entry)
+    {
+        return InternalMap.find(entry) != InternalMap.end();
+    }
+
     bool Insert(TEntryEnumType entry, TStorageType storageValue)
     {
         //TODO: Do some checking for if it's already present.
@@ -471,7 +476,16 @@ public:
             this->BossEntryToGuidMap.Insert(static_cast<TBossEntryEnumType>(entry), creature->GetGUID());
         else
         {
-            this->NpcEntryToGuidsMap.Insert(static_cast<TNpcEntryEnumType>(entry), std::vector<ObjectGuid> { creature->GetGUID() });
+            TNpcEntryEnumType castedEntry = static_cast<TNpcEntryEnumType>(entry);
+
+            //If it already contains an entry we must add it to the vector
+            if (NpcEntryToGuidsMap.ContainsKey(castedEntry))
+            {
+                std::vector<ObjectGuid>& v = NpcEntryToGuidsMap.FindByEntry(castedEntry);
+                v.push_back(creature->GetGUID());
+            }
+            else
+                this->NpcEntryToGuidsMap.Insert(castedEntry, std::move(std::vector<ObjectGuid> { creature->GetGUID() }));
         }
     }
 
