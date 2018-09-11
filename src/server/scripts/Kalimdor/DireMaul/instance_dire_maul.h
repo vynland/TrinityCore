@@ -7,9 +7,7 @@
 #include "InstanceScript.h"
 #include "Map.h"
 #include "Unit.h"
-#include <boost/stacktrace.hpp>
 #include "Log.h"
-#include <iostream>
 
 enum DireMaulBossIndex
 {
