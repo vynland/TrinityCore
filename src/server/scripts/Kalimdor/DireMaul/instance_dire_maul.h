@@ -7,6 +7,9 @@
 #include "InstanceScript.h"
 #include "Map.h"
 #include "Unit.h"
+#include <boost/stacktrace.hpp>
+#include "Log.h"
+#include <iostream>
 
 enum DireMaulBossIndex
 {
@@ -144,11 +147,11 @@ public:
 
     //The target callback for the event, should accept a guid value, and the target instance.
     InstanceEventInvokable(const InstanceEventInvokerFunction invokable, InstanceScript* capturedTarget)
+        : Invokable(invokable),
+        CapturedTarget(capturedTarget)
     {
         ASSERT(invokable != nullptr);
         ASSERT(capturedTarget != nullptr);
-        Invokable = invokable;
-        CapturedTarget = capturedTarget;
     }
 
     //The invoker should be that guid of the object that cause the event to happen.
@@ -189,32 +192,78 @@ private:
 };
 
 
+template<typename TEventInputType>
 class InstanceEventRegister
 {
 public:
-    //Registers an event with the given registeration data associated with the provided GUID.
-    virtual void RegisterEvent(ObjectGuid invoker, InstanceEventRegisteration registerationData) = 0;
+    //Registers an event with the given registeration data associated with the event input.
+    virtual void RegisterEvent(TEventInputType invoker, InstanceEventRegisteration registerationData) = 0;
 
     //TODO: Support a shared registeration between multiple invokes (like a group of NPCs that all must die before an event fires)
 };
 
+template<typename TEventInputType>
 class InstanceEventProcessor
 {
 public:
     //Should be called to process a potential event.
     //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
-    virtual void ProcessEvent(ObjectGuid potentialInvoker) = 0;
+    virtual void ProcessEvent(TEventInputType potentialInvoker) = 0;
 };
 
-class InstanceEventManager : public InstanceEventProcessor, public InstanceEventRegister
+template<typename TEntryEnumType>
+class InstanceUnitEventManager : public InstanceEventProcessor<Unit*>, public InstanceEventRegister<TEntryEnumType>
+{
+public:
+    void RegisterEvent(TEntryEnumType invoker, InstanceEventRegisteration registerationData)
+    {
+        //TODO: Check if an event is already registered, handle it somehow. Maybe throw?
+        ListenerMap.emplace(std::make_pair(invoker, registerationData));
+    }
+
+    //TODO: How to reduce duplicated code?
+    //Should be called to process a potential event.
+    //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
+    void ProcessEvent(Unit* potentialInvoker)
+    {
+        ASSERT(potentialInvoker);
+
+        TEntryEnumType entry = static_cast<TEntryEnumType>(potentialInvoker->GetEntry());
+
+        auto i = ListenerMap.find(entry);
+        if (i != ListenerMap.end())
+        {
+            InstanceEventRegisteration eventData = (*i).second;
+
+            //The concept here is that conditions must be met sometimes for an event to be invokable.
+            //Just because an event involving the above GUID occured doesn't mean there are any listeners
+            //or if the listener coniditions for the event to fire have been met. So we need to give a chance for the Condition
+            //object to handle a new interesting event, with the idea to IsEventReady will eventually be true and firable.
+            eventData.GetCondition().Process(potentialInvoker->GetGUID());
+
+            //TODO: Handle deregisteration maybe, handle reregisteration too.
+            //Now we can check if the conditions have been met. If they are we can fire the event.
+            if (eventData.GetCondition().IsEventReady())
+                eventData.GetInvokable().Invoke(potentialInvoker->GetGUID());
+        }
+
+        //We don't really need to say anything so we return nothing. Though maybe we want to share some details in the future to callers.
+    }
+
+private:
+    std::map<TEntryEnumType, InstanceEventRegisteration> ListenerMap;
+};
+
+class InstanceGuidEventManager : public InstanceEventProcessor<ObjectGuid>, public InstanceEventRegister<ObjectGuid>
 {
 public:
     void RegisterEvent(ObjectGuid invoker, InstanceEventRegisteration registerationData)
     {
         //TODO: Check if an event is already registered, handle it somehow. Maybe throw?
-        ListenerMap.insert(std::make_pair(invoker, registerationData));
+        ListenerMap.emplace(std::make_pair(invoker, registerationData));
     }
 
+    //TODO: How to reduce duplicated code?
     //Should be called to process a potential event.
     //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
     void ProcessEvent(ObjectGuid potentialInvoker)
@@ -243,118 +292,32 @@ private:
     std::map<ObjectGuid, InstanceEventRegisteration> ListenerMap;
 };
 
-//This version exists because you may want to have a vector of GUID instead of GUID
-template<typename StorageType, typename TEntryEnumType>
-class ReadonlyInstanceObjectEntryLookupContainer
+template<typename TEntryEnumType, typename TStorageType>
+class ObjectEntryLookupContainer
 {
     static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
 
 public:
-    ReadonlyInstanceObjectEntryLookupContainer() { }
+    ObjectEntryLookupContainer() { }
 
-    //Returns the StorageType associated with an entry. It should return Empty if none are found.
-    virtual StorageType FindByEntry(TEntryEnumType entry) const = 0;
-};
-
-template<typename TEntryEnumType>
-class ReadonlyInstanceObjectEntryGuidLookupContainer : public ReadonlyInstanceObjectEntryLookupContainer<ObjectGuid, TEntryEnumType>
-{
-    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
-
-public:
-    ReadonlyInstanceObjectEntryGuidLookupContainer() { }
-
-    //TODO: We may want to expose a way to iterate all GUIDs.
-};
-
-template<typename StorageType, typename TEntryEnumType>
-class MutableInstanceObjectEntryLookupContainer
-{
-    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
-
-public:
-    MutableInstanceObjectEntryLookupContainer() { }
-
-    virtual bool Insert(TEntryEnumType entry, StorageType storageValue) = 0;
-};
-
-template<typename TEntryEnumType>
-class MutableInstanceObjectEntryGuidLookupContainer : MutableInstanceObjectEntryLookupContainer<ObjectGuid, TEntryEnumType>
-{
-    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
-
-public:
-    MutableInstanceObjectEntryGuidLookupContainer() { }
-};
-
-template<typename TEntryEnumType>
-class DefaultInstanceObjectEntryGuidLookupContainer : public MutableInstanceObjectEntryGuidLookupContainer<TEntryEnumType>, public ReadonlyInstanceObjectEntryGuidLookupContainer<TEntryEnumType>
-{
-    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
-
-public:
-    //We could have gone the specialization route but having simplied/aliased types as interface/purvirtual seemed cleaner.
-    ObjectGuid FindByEntry(TEntryEnumType entry) const
-    {
-        auto f = InternalMap.find(entry);
-        if (f != InternalMap.end())
-            return (*f).second;
-        else
-            return ObjectGuid::Empty;
-    }
-
-    bool Insert(TEntryEnumType entry, ObjectGuid storageValue)
+    bool Insert(TEntryEnumType entry, TStorageType storageValue)
     {
         //TODO: Do some checking for if it's already present.
         InternalMap.emplace(std::make_pair(entry, storageValue));
         return true;
     }
-
-private:
-    std::map<TEntryEnumType, ObjectGuid> InternalMap;
-};
-
-template<typename TEntryEnumType>
-class DefaultInstanceObjectEntryGuidListLookupContainer : public MutableInstanceObjectEntryLookupContainer<std::vector<ObjectGuid>, TEntryEnumType>, public ReadonlyInstanceObjectEntryLookupContainer<std::vector<ObjectGuid>, TEntryEnumType>
-{
-    static_assert(std::is_enum<TEntryEnumType>::value, "TEntryEnumType must be an enumeration type.");
-
-public:
-    //We could have gone the specialization route but having simplied/aliased types as interface/purvirtual seemed cleaner.
-    std::vector<ObjectGuid> FindByEntry(TEntryEnumType entry) const
+    
+    TStorageType FindByEntry(TEntryEnumType entry) const
     {
         auto f = InternalMap.find(entry);
         if (f != InternalMap.end())
             return (*f).second;
-        else
-            return std::vector<ObjectGuid>(); //ODO: Add a Contains method so callers can check that so we don't have to return empty vectors often.
+
+        //TODO: Handle ObjectGuid case better somehow
+        return TStorageType();
     }
-
-    //TODO: Any way with templates to not have to duplicate this method?
-    bool Insert(TEntryEnumType entry, std::vector<ObjectGuid> storageValue)
-    {
-        //TODO: Do some checking for if it's already present.
-        InternalMap.emplace(std::make_pair(entry, storageValue));
-        return true;
-    }
-
-    //This allows for the insertion of a single guid. Will create a vector if it doesn't exist.
-    bool Insert(TEntryEnumType entry, ObjectGuid singleGuid)
-    {
-        //TODO: Do some checking for if it's already present.
-        //TODO: Extract to a contains method
-        if (InternalMap.find(entry) != InternalMap.end())
-        {
-            InternalMap.at(entry).push_back(singleGuid);
-        }
-        else
-            return Insert(entry, std::vector<ObjectGuid> { singleGuid });
-
-        return true;
-    }
-
 private:
-    std::map<TEntryEnumType, std::vector<ObjectGuid>> InternalMap;
+    std::map<TEntryEnumType, TStorageType> InternalMap;
 };
 
 //TODO: Extract into seperate 
@@ -371,6 +334,8 @@ public:
     // Insert/Remove objectguid to dynamic guid store
     void OnCreatureCreate(Creature* creature) override
     {
+        //std::cout << boost::stacktrace::stacktrace();
+
         InstanceScript::OnCreatureCreate(creature);
 
         const int entry = creature->GetEntry();
@@ -380,7 +345,7 @@ public:
             this->BossEntryToGuidMap.Insert(static_cast<TBossEntryEnumType>(entry), creature->GetGUID());
         else
         {
-            this->NpcEntryToGuidsMap.Insert(static_cast<TNpcEntryEnumType>(entry), creature->GetGUID());
+            this->NpcEntryToGuidsMap.Insert(static_cast<TNpcEntryEnumType>(entry), std::vector<ObjectGuid> { creature->GetGUID() });
         }
     }
 
@@ -388,6 +353,16 @@ public:
     {
         //When a unit dies we must alert the related event managers
         //They may or may not dispatch an event related to it but it's constant time to check if one can be dispatched.
+        if (u->GetTypeId() == TYPEID_UNIT)
+        {
+            //It's a creature 100%
+            Creature* c = u->ToCreature();
+
+            //If it's a boss then we should dispatch it to the boss event manager
+            //so that any listeners listening for the death of this boss can be notified.
+            if (c->IsDungeonBoss() || c->isWorldBoss())
+                BossDeathEventManager.ProcessEvent(u);
+        }
     }
 
     void OnGameObjectCreate(GameObject* go) override
@@ -396,17 +371,17 @@ public:
     }
 
 protected:
-    const ReadonlyInstanceObjectEntryGuidLookupContainer<TBossEntryEnumType> GetBossEntryContainer() const
+    const ObjectEntryLookupContainer<TBossEntryEnumType, ObjectGuid> GetBossEntryContainer() const
     {
         return BossEntryToGuidMap;
     }
 
-    const ReadonlyInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GetGameObjectEntryContainer() const
+    const ObjectEntryLookupContainer<TGameObjectEntryType, ObjectGuid> GetGameObjectEntryContainer() const
     {
         return GameObjectEntryToGuidMap;
     }
 
-    const DefaultInstanceObjectEntryGuidListLookupContainer<TNpcEntryEnumType> GetNpcEntryContainer() const
+    const ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>> GetNpcEntryContainer() const
     {
         return NpcEntryToGuidsMap;
     }
@@ -415,14 +390,14 @@ protected:
     template<typename TFunctionPointerType>
     void RegisterOnBossCreatureDeathEvent(DireMaulBossEntry entry, TFunctionPointerType functionPointer)
     {
-        //TODO: Check if guid for entry exists.
-        
-        ObjectGuid guid = GetBossEntryContainer().FindByEntry(entry);
-        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer), this);
-        BossDeathEventManager.RegisterEvent(guid, InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
-    }
+        //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
+        //therefore we must push this into a map and wait for the entry/guid map to be registered.
+        sLog->outCommand(entry, "Registering Boss Entry: %u with an event callback.", entry);
 
-    //TODO: Add instance even registeration exposed via polymorphic getter.
+        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer), this);
+        InstanceEventRegisteration registeration = InstanceEventRegisteration(InstanceEventCondition::Default, invokable);
+        BossDeathEventManager.RegisterEvent(entry, registeration);
+    }
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
     TGameObjectEntryType ConvertToEntry(GameObject* go)
@@ -433,14 +408,14 @@ protected:
 
 private:
     //TODO: Rename
-    DefaultInstanceObjectEntryGuidLookupContainer<TBossEntryEnumType> BossEntryToGuidMap;
-    DefaultInstanceObjectEntryGuidLookupContainer<TGameObjectEntryType> GameObjectEntryToGuidMap;
+    ObjectEntryLookupContainer<TBossEntryEnumType, ObjectGuid> BossEntryToGuidMap;
+    ObjectEntryLookupContainer<TGameObjectEntryType, ObjectGuid> GameObjectEntryToGuidMap;
 
     //NPC entries may be duplicated throughout the instance but may have multiple instances of the NPC. The GUID identifies them, that is why we use a collection.
-    DefaultInstanceObjectEntryGuidListLookupContainer<TNpcEntryEnumType> NpcEntryToGuidsMap;
+    ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>> NpcEntryToGuidsMap;
 
     //Event managers. Concept here is we have multiple managers and one for each event type.
-    InstanceEventManager BossDeathEventManager;
+    InstanceUnitEventManager<DireMaulBossEntry> BossDeathEventManager;
 };
 
 #endif
