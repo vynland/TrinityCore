@@ -27,15 +27,14 @@ public:
         {
             SetBossNumber(DIREMAUL_BOSS_COUNT);
 
-            //InstanceEventInvokable<Unit*> invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(&instance_dire_maul_InstanceMapScript::Test), this);
-            this->RegisterOnBossCreatureDeathEvent(DireMaulBossEntry::NPC_TENDRIS, &instance_dire_maul_InstanceMapScript::OnTendrisDeath);
+            RegisterOnBossCreatureDeathEvent(DireMaulBossEntry::NPC_TENDRIS, &instance_dire_maul_InstanceMapScript::OnTendrisDeath);
         }
 
         void OnTendrisDeath(ObjectGuid guid)
         {
             //Guid should be tendris'
             //Kill the player for test purposes.
-            this->DoCastSpellOnPlayers(5); //death touch.
+            DoCastSpellOnPlayers(5); //death touch.
         }
     };
 

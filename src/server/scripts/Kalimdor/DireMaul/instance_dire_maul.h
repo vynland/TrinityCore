@@ -128,8 +128,9 @@ public:
         return true;
     }
 
-    virtual void Process(ObjectGuid invoker)
+    virtual void Process(Unit* invoker)
     {
+        ASSERT(invoker);
         //Default is always true so do nothing.
         return;
     }
@@ -211,85 +212,87 @@ public:
     virtual void ProcessEvent(TEventInputType potentialInvoker) = 0;
 };
 
-template<typename TEntryEnumType>
-class InstanceUnitEventManager : public InstanceEventProcessor<Unit*>, public InstanceEventRegister<TEntryEnumType>
+//Strategy for producing the key used for an event.
+template<typename TKeyType>
+class InstanceEventKeyUnitStrategy
+{
+    //TODO: Figure out why this static assert doesn't work.
+    static_assert(std::is_enum<TKeyType>::value, "Only supported template types are enums and ObjectGuid.");
+public:
+    TKeyType GetKey(Unit* u)
+    {
+        //Assume anything else is the entry
+        return static_cast<TKeyType>(u->GetEntry());
+    }
+};
+
+template<>
+class InstanceEventKeyUnitStrategy<ObjectGuid>
 {
 public:
-    void RegisterEvent(TEntryEnumType invoker, InstanceEventRegisteration registerationData)
+    ObjectGuid GetKey(Unit* u)
     {
-        //TODO: Check if an event is already registered, handle it somehow. Maybe throw?
-        ListenerMap.emplace(std::make_pair(invoker, registerationData));
+        return u->GetGUID();
+    }
+};
+
+template<typename TKeyType>
+class InstanceUnitEventListManager : public InstanceEventProcessor<Unit*>, public InstanceEventRegister<TKeyType>
+{
+public:
+    void RegisterEvent(TKeyType invoker, InstanceEventRegisteration registerationData)
+    {
+        auto i = ListenerMap.find(invoker);
+        if (i == ListenerMap.end()) //if there is none
+        {
+            ListenerMap.emplace(std::make_pair(invoker, std::vector<InstanceEventRegisteration> { registerationData }));
+        }
+        else
+        {
+            //We just put it in the vector of registered events.
+            ListenerMap.at(invoker).push_back(registerationData);
+        }
     }
 
-    //TODO: How to reduce duplicated code?
-    //Should be called to process a potential event.
-    //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
     void ProcessEvent(Unit* potentialInvoker)
     {
         ASSERT(potentialInvoker);
 
-        TEntryEnumType entry = static_cast<TEntryEnumType>(potentialInvoker->GetEntry());
+        //We invoke by entry for this event manager so we need to get the entry
+        TKeyType key = KeyParser.GetKey(potentialInvoker);
 
-        auto i = ListenerMap.find(entry);
-        if (i != ListenerMap.end())
+        //TODO: Look into using find instead of at everywhere to make this run faster, make sure it doesn't copy.
+        if (ListenerMap.find(key) != ListenerMap.end())
         {
-            InstanceEventRegisteration eventData = (*i).second;
+            std::vector<InstanceEventRegisteration>& invokationList = ListenerMap.at(key);
 
-            //The concept here is that conditions must be met sometimes for an event to be invokable.
-            //Just because an event involving the above GUID occured doesn't mean there are any listeners
-            //or if the listener coniditions for the event to fire have been met. So we need to give a chance for the Condition
-            //object to handle a new interesting event, with the idea to IsEventReady will eventually be true and firable.
-            eventData.GetCondition().Process(potentialInvoker->GetGUID());
+            //Iterate the invokation list and remove any fired events from the list.
+            invokationList.erase(std::remove_if(invokationList.begin(), invokationList.end(), [=](InstanceEventRegisteration& eventData)
+            {
+                eventData.GetCondition().Process(potentialInvoker);
 
-            //TODO: Handle deregisteration maybe, handle reregisteration too.
-            //Now we can check if the conditions have been met. If they are we can fire the event.
-            if (eventData.GetCondition().IsEventReady())
-                eventData.GetInvokable().Invoke(potentialInvoker->GetGUID());
+                if (eventData.GetCondition().IsEventReady())
+                {
+                    eventData.GetInvokable().Invoke(potentialInvoker->GetGUID());
+
+                    //Don't be clever and return the IsEventReady. We can't rely on implementers to always return what we expect
+                    //as well as even if we assume it should still be true we can't expect that it is free to comput. Just return true
+                    return true;
+                }
+
+                //Don't remove the event
+                return false;
+            }));
+
+            //We should remove the vector if it is empty from the map
+            if (invokationList.empty())
+                ListenerMap.erase(ListenerMap.find(key));
         }
-
-        //We don't really need to say anything so we return nothing. Though maybe we want to share some details in the future to callers.
     }
 
 private:
-    std::map<TEntryEnumType, InstanceEventRegisteration> ListenerMap;
-};
-
-class InstanceGuidEventManager : public InstanceEventProcessor<ObjectGuid>, public InstanceEventRegister<ObjectGuid>
-{
-public:
-    void RegisterEvent(ObjectGuid invoker, InstanceEventRegisteration registerationData)
-    {
-        //TODO: Check if an event is already registered, handle it somehow. Maybe throw?
-        ListenerMap.emplace(std::make_pair(invoker, registerationData));
-    }
-
-    //TODO: How to reduce duplicated code?
-    //Should be called to process a potential event.
-    //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
-    void ProcessEvent(ObjectGuid potentialInvoker)
-    {
-        auto i = ListenerMap.find(potentialInvoker);
-        if (i != ListenerMap.end())
-        {
-            InstanceEventRegisteration eventData = (*i).second;
-
-            //The concept here is that conditions must be met sometimes for an event to be invokable.
-            //Just because an event involving the above GUID occured doesn't mean there are any listeners
-            //or if the listener coniditions for the event to fire have been met. So we need to give a chance for the Condition
-            //object to handle a new interesting event, with the idea to IsEventReady will eventually be true and firable.
-            eventData.GetCondition().Process(potentialInvoker);
-
-            //TODO: Handle deregisteration maybe, handle reregisteration too.
-            //Now we can check if the conditions have been met. If they are we can fire the event.
-            if (eventData.GetCondition().IsEventReady())
-                eventData.GetInvokable().Invoke(potentialInvoker);
-        }
-
-        //We don't really need to say anything so we return nothing. Though maybe we want to share some details in the future to callers.
-    }
-
-private:
-    std::map<ObjectGuid, InstanceEventRegisteration> ListenerMap;
+    std::map<TKeyType, std::vector<InstanceEventRegisteration>> ListenerMap;
+    InstanceEventKeyUnitStrategy<TKeyType> KeyParser;
 };
 
 template<typename TEntryEnumType, typename TStorageType>
@@ -415,7 +418,7 @@ private:
     ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>> NpcEntryToGuidsMap;
 
     //Event managers. Concept here is we have multiple managers and one for each event type.
-    InstanceUnitEventManager<DireMaulBossEntry> BossDeathEventManager;
+    InstanceUnitEventListManager<TBossEntryEnumType> BossDeathEventManager;
 };
 
 #endif
