@@ -144,27 +144,24 @@ InstanceEventCondition InstanceEventCondition::Default = InstanceEventCondition(
 class InstanceEventInvokable
 {
 public:
-    typedef void (InstanceScript::*InstanceEventInvokerFunction)(ObjectGuid);
+    typedef std::function<void(ObjectGuid&)> InstanceEventInvokerFunction;
 
     //The target callback for the event, should accept a guid value, and the target instance.
-    InstanceEventInvokable(const InstanceEventInvokerFunction invokable, InstanceScript* capturedTarget)
-        : Invokable(invokable),
-        CapturedTarget(capturedTarget)
+    InstanceEventInvokable(const InstanceEventInvokerFunction invokable)
+        : Invokable(invokable)
     {
         ASSERT(invokable != nullptr);
-        ASSERT(capturedTarget != nullptr);
     }
 
     //The invoker should be that guid of the object that cause the event to happen.
     void Invoke(ObjectGuid invoker) const
     {
         ASSERT(!invoker.IsEmpty());
-        (CapturedTarget->*Invokable)(invoker);
+        (Invokable)(invoker);
     }
 
 private:
     InstanceEventInvokerFunction Invokable;
-    InstanceScript* CapturedTarget;
 };
 
 class InstanceEventRegisteration
@@ -563,7 +560,7 @@ private:
     template<typename TEntryType, typename TFunctionPointerType>
     void RegisterEvent(InstanceUnitEventListManager<TEntryType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition> condition)
     {
-        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer), this);
+        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
         std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(std::move(condition), invokable));
         manager.RegisterEvent(entry, std::move(registeration));
     }
@@ -574,7 +571,7 @@ private:
     {
         sLog->outCommand(0, "Registering event with a default condition.");
 
-        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer), this);
+        InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
         std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
         //manager.RegisterEvent(entry, std::move(registeration));
     }
