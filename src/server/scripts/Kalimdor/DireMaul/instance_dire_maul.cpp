@@ -55,7 +55,7 @@ public:
         void CreateAndRegisterPylonEvent(int goalTotal, std::vector<int> abberationSpawnIds, std::vector<int> manaElementalSpawnIds, InstanceEventInvokable::InstanceEventInvokerFunction callback)
         {
             //THis tally goal is shared between them because we have multiple types of NPCs that contribute to the tally for this event
-            std::shared_ptr<SharedTallyConditionDecorator::TallyGoal> goal(new SharedTallyConditionDecorator::TallyGoal(goalTotal));
+            std::shared_ptr<TallyGoal> goal(new TallyGoal(goalTotal));
 
             //TODO: Use static vectors since they never change value.
             //Registers a group of NPCs associated with a pylon. The shared goal of killing all of them represented by the tally goal
@@ -64,10 +64,10 @@ public:
             RegisterPylonEvent(DireMaulNpcEntry::NPC_RESTE_MANA, std::move(manaElementalSpawnIds), goal, callback);
         }
 
-        void RegisterPylonEvent(DireMaulNpcEntry entry, std::vector<int> spawnIds, std::shared_ptr<SharedTallyConditionDecorator::TallyGoal> goal, InstanceEventInvokable::InstanceEventInvokerFunction callback)
+        void RegisterPylonEvent(DireMaulNpcEntry entry, std::vector<int> spawnIds, std::shared_ptr<TallyGoal> goal, InstanceEventInvokable::InstanceEventInvokerFunction callback)
         {
             std::unique_ptr<UnitAllSpawnIdListCondition> spawnIdCondition(new UnitAllSpawnIdListCondition(std::move(spawnIds)));
-            std::unique_ptr<SharedTallyConditionDecorator> tallyCondition(new SharedTallyConditionDecorator(goal, std::move(spawnIdCondition), 2));
+            std::unique_ptr<SharedTallyConditionDecorator<Unit>> tallyCondition(new SharedTallyConditionDecorator<Unit>(goal, std::move(spawnIdCondition), 2));
             RegisterOnNpcDeathEvent(entry, callback, std::move(tallyCondition));
         }
 
