@@ -72,7 +72,9 @@ public:
 
         void UnlockedTheThing(ObjectGuid last)
         {
-            sLog->outCommand(0, "Unlocked immothar.");
+            //Just interact with the immmothar barrier to unlock it.
+            //TODO: Start the inside event or whater
+            OpenGameObject(DireMaulGameObjectEntry::GO_FORCE_FIELD);
         }
 
         void CreateAndRegisterPylonEvent(int goalTotal, std::vector<int> abberationSpawnIds, std::vector<int> manaElementalSpawnIds, InstanceEventInvokable::InstanceEventInvokerFunction callback)
@@ -96,8 +98,14 @@ public:
 
         void OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry pylonEntry)
         {
-            GameObject* pylon1 = instance->GetGameObject(GetGameObjectEntryContainer().FindByEntry(pylonEntry));
-            this->HandleGameObject(ObjectGuid::Empty, true, pylon1);
+            OpenGameObject(pylonEntry);
+        }
+
+        void OpenGameObject(DireMaulGameObjectEntry entry)
+        {
+            GameObject* obj = instance->GetGameObject(GetGameObjectEntryContainer().FindByEntry(entry));
+            ASSERT(obj);
+            this->HandleGameObject(ObjectGuid::Empty, true, obj);
         }
     };
 
