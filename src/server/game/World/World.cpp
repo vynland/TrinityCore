@@ -89,6 +89,8 @@
 
 #include <boost/asio/ip/address.hpp>
 
+#include "QuestCompleter.h"
+
 TC_GAME_API std::atomic<bool> World::m_stopEvent(false);
 TC_GAME_API uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
 
@@ -2149,6 +2151,10 @@ void World::SetInitialWorldSettings()
 
     if (uint32 realmId = sConfigMgr->GetIntDefault("RealmID", 0)) // 0 reserved for auth
         sLog->SetRealmId(realmId);
+
+    // Custom
+    sQuestCompleter->LoadQuestCompleterQuests();
+    sQuestCompleter->LoadQuestCompleterComments();
 }
 
 void World::DetectDBCLang()

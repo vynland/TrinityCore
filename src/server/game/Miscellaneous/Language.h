@@ -1160,6 +1160,19 @@ enum TrinityStrings
     LANG_CREATURE_NOT_AI_ENABLED                  = 11015,
     LANG_SELECT_PLAYER_OR_PET                     = 11016,
     LANG_SHUTDOWN_DELAYED                         = 11017,
-    LANG_SHUTDOWN_CANCELLED                       = 11018
+    LANG_SHUTDOWN_CANCELLED                       = 11018,
+
+    // Custom (15000+)
+    LANG_COMMAND_QC                               = 15000,
+    LANG_COMMAND_QC_COMPLETE                      = 15001,
+    LANG_COMMAND_QC_FOUND                         = 15002,
+    LANG_COMMAND_QC_EMPTY                         = 15003,
+    LANG_COMMAND_QC_ADD                           = 15004,
+    LANG_COMMAND_QC_ADD_SUCCESS                   = 15005,
+    LANG_COMMAND_QC_ADD_EXISTS                    = 15006,
+    LANG_COMMAND_QC_DEL                           = 15007,
+    LANG_COMMAND_QC_DEL_SUCCESS                   = 15008,
+    LANG_COMMAND_QC_DEL_ERROR                     = 15009,
+    LANG_COMMAND_QC_DEL_ERROR_2                   = 15010,
 };
 #endif
