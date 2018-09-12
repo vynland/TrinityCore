@@ -207,13 +207,13 @@ public:
 };
 
 //Strategy for producing the key used for an event.
-template<typename TKeyType>
+template<typename TKeyType, typename TEventSourceType>
 class InstanceEventKeyUnitStrategy
 {
     //TODO: Figure out why this static assert doesn't work.
     static_assert(std::is_enum<TKeyType>::value, "Only supported template types are enums and ObjectGuid.");
 public:
-    TKeyType GetKey(Unit* u)
+    TKeyType GetKey(TEventSourceType* u)
     {
         //Assume anything else is the entry
         return static_cast<TKeyType>(u->GetEntry());
@@ -221,7 +221,7 @@ public:
 };
 
 template<>
-class InstanceEventKeyUnitStrategy<ObjectGuid>
+class InstanceEventKeyUnitStrategy<ObjectGuid, Unit>
 {
 public:
     ObjectGuid GetKey(Unit* u)
@@ -230,8 +230,18 @@ public:
     }
 };
 
-template<typename TKeyType>
-class InstanceUnitEventListManager : public InstanceEventProcessor<Unit*>, public InstanceEventRegister<TKeyType>
+template<>
+class InstanceEventKeyUnitStrategy<ObjectGuid, GameObject>
+{
+public:
+    ObjectGuid GetKey(Unit* u)
+    {
+        return u->GetGUID();
+    }
+};
+
+template<typename TKeyType, typename TEventSourceType>
+class InstanceUnitEventListManager : public InstanceEventProcessor<TEventSourceType*>, public InstanceEventRegister<TKeyType>
 {
 public:
     void RegisterEvent(TKeyType invoker, std::unique_ptr<InstanceEventRegisteration> registerationData)
@@ -250,7 +260,7 @@ public:
         }
     }
 
-    void ProcessEvent(Unit* potentialInvoker)
+    void ProcessEvent(TEventSourceType* potentialInvoker)
     {
         ASSERT(potentialInvoker);
 
@@ -277,28 +287,6 @@ public:
                 }
             }
 
-            //Iterate the invokation list and remove any fired events from the list.
-            /*invokationList.erase(std::remove_if(invokationList.begin(), invokationList.end(), [&](std::unique_ptr<InstanceEventRegisteration>& eventData) //careful to capture correctly, copy capture causes crashes
-            {
-                eventData->GetCondition()->Process(potentialInvoker);
-
-                bool ready = eventData->GetCondition()->IsEventReady();
-
-                sLog->outCommand(0, "GUID: %u about to Fire Event: (0 False) (1 True) %u. Name: %s", potentialInvoker->GetGUID().GetCounter(), ready, potentialInvoker->GetName());
-
-                if (ready)
-                {
-                    eventData->GetInvokable().Invoke(potentialInvoker->GetGUID());
-
-                    //Don't be clever and return the IsEventReady. We can't rely on implementers to always return what we expect
-                    //as well as even if we assume it should still be true we can't expect that it is free to comput. Just return true
-                    return true;
-                }
-
-                //Don't remove the event
-                return false;
-            }));*/
-
             //We should remove the vector if it is empty from the map
             if (invokationList.empty())
                 ListenerMap.erase(ListenerMap.find(key));
@@ -307,7 +295,7 @@ public:
 
 private:
     std::map<TKeyType, std::vector<std::unique_ptr<InstanceEventRegisteration>>> ListenerMap;
-    InstanceEventKeyUnitStrategy<TKeyType> KeyParser;
+    InstanceEventKeyUnitStrategy<TKeyType, TEventSourceType> KeyParser;
 };
 
 template<typename TEntryEnumType, typename TStorageType>
@@ -565,11 +553,11 @@ private:
     ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>> NpcEntryToGuidsMap;
 
     //Event managers. Concept here is we have multiple managers and one for each event type.
-    InstanceUnitEventListManager<TBossEntryEnumType> BossDeathEventManager;
-    InstanceUnitEventListManager<TNpcEntryEnumType> NpcDeathEventManager;
+    InstanceUnitEventListManager<TBossEntryEnumType, Unit> BossDeathEventManager;
+    InstanceUnitEventListManager<TNpcEntryEnumType, Unit> NpcDeathEventManager;
 
-    template<typename TEntryType, typename TFunctionPointerType>
-    void RegisterEvent(InstanceUnitEventListManager<TEntryType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition> condition)
+    template<typename TEntryType, typename TFunctionPointerType, typename TEventSourceType>
+    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition> condition)
     {
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
         std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(std::move(condition), invokable));
@@ -577,14 +565,14 @@ private:
     }
 
     //We have a second template with no condition parameter because we can't pass Default to the other one. It does a move.
-    template<typename TEntryType, typename TFunctionPointerType>
-    void RegisterEvent(InstanceUnitEventListManager<TEntryType>& manager, TEntryType& entry, TFunctionPointerType functionPointer)
+    template<typename TEntryType, typename TFunctionPointerType, typename TEventSourceType>
+    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer)
     {
         sLog->outCommand(0, "Registering event with a default condition.");
 
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
         std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
-        //manager.RegisterEvent(entry, std::move(registeration));
+        manager.RegisterEvent(entry, std::move(registeration));
     }
 };
 
