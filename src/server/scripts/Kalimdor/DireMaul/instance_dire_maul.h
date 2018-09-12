@@ -384,6 +384,32 @@ private:
     }
 };
 
+//TODO: Move this
+class GameObjectActiveEventCondition : public InstanceEventCondition<GameObject>
+{
+public:
+    GameObjectActiveEventCondition()
+        : isActive(false)
+    {
+
+    }
+
+    virtual bool IsEventReady() const override
+    {
+        return isActive;
+    }
+
+    virtual void Process(GameObject* invoker) override
+    {
+        ASSERT(invoker);
+        ///We just check if it's active now.
+        isActive = invoker->GetGoState() == GOState::GO_STATE_ACTIVE;
+        return;
+    }
+private:
+    bool isActive;
+};
+
 //TODO: Rename
 //We brought this out of the class because it turned into a template.
 struct TallyGoal
