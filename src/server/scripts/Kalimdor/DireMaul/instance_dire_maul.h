@@ -113,12 +113,13 @@ inline void DisableUnit(Unit* const unit)
 }
 
 //The default condition is always ready for invokation.
+template<typename TEventSourceType>
 class InstanceEventCondition
 {
 public:
     InstanceEventCondition() { }
 
-    static InstanceEventCondition Default;
+    static InstanceEventCondition<TEventSourceType> Default;// = InstanceEventCondition<TEventSourceType>();
 
     //Indicates if the event is ready to be dispatched.
     virtual bool IsEventReady() const
@@ -126,16 +127,13 @@ public:
         return true;
     }
 
-    virtual void Process(Unit* invoker)
+    virtual void Process(TEventSourceType* invoker)
     {
         ASSERT(invoker);
         //Default is always true so do nothing.
         return;
     }
 };
-
-//TODO: Should this be here?
-InstanceEventCondition InstanceEventCondition::Default = InstanceEventCondition();
 
 
 //TODO: We want to support many types of patterns seen in instances.
@@ -162,16 +160,17 @@ private:
     InstanceEventInvokerFunction Invokable;
 };
 
+template<typename TEventSourceType>
 class InstanceEventRegisteration
 {
 public:
-    InstanceEventRegisteration(std::unique_ptr<InstanceEventCondition> condition, InstanceEventInvokable invokable)
+    InstanceEventRegisteration(std::unique_ptr<InstanceEventCondition<TEventSourceType>> condition, InstanceEventInvokable invokable)
         : Condition(std::move(condition)), Invokable(invokable)
     {
 
     }
 
-    InstanceEventCondition* GetCondition()
+    InstanceEventCondition<TEventSourceType>* GetCondition()
     {
         return Condition.get();
     }
@@ -182,28 +181,28 @@ public:
     }
 
 private:
-    std::unique_ptr<InstanceEventCondition> Condition;
+    std::unique_ptr<InstanceEventCondition<TEventSourceType>> Condition;
     InstanceEventInvokable Invokable;
 };
 
 
-template<typename TEventInputType>
+template<typename TKeyType, typename TEventSourceType>
 class InstanceEventRegister
 {
 public:
     //Registers an event with the given registeration data associated with the event input.
-    virtual void RegisterEvent(TEventInputType invoker, std::unique_ptr<InstanceEventRegisteration> registerationData) = 0;
+    virtual void RegisterEvent(TKeyType invoker, std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registerationData) = 0;
 
     //TODO: Support a shared registeration between multiple invokes (like a group of NPCs that all must die before an event fires)
 };
 
-template<typename TEventInputType>
+template<typename TEventSourceType>
 class InstanceEventProcessor
 {
 public:
     //Should be called to process a potential event.
     //May not actually raise an event if none are registered/listening for an event involving this potential invoker.
-    virtual void ProcessEvent(TEventInputType potentialInvoker) = 0;
+    virtual void ProcessEvent(TEventSourceType* potentialInvoker) = 0;
 };
 
 //Strategy for producing the key used for an event.
@@ -241,15 +240,15 @@ public:
 };
 
 template<typename TKeyType, typename TEventSourceType>
-class InstanceUnitEventListManager : public InstanceEventProcessor<TEventSourceType*>, public InstanceEventRegister<TKeyType>
+class InstanceUnitEventListManager : public InstanceEventProcessor<TEventSourceType>, public InstanceEventRegister<TKeyType, TEventSourceType>
 {
 public:
-    void RegisterEvent(TKeyType invoker, std::unique_ptr<InstanceEventRegisteration> registerationData)
+    void RegisterEvent(TKeyType invoker, std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registerationData) override
     {
         auto i = ListenerMap.find(invoker);
         if (i == ListenerMap.end()) //if there is none
         {
-            std::vector<std::unique_ptr<InstanceEventRegisteration>> invokationList;
+            std::vector<std::unique_ptr<InstanceEventRegisteration<TEventSourceType>>> invokationList;
             invokationList.push_back(std::move(registerationData));
             ListenerMap.emplace(std::make_pair(invoker, std::move(invokationList)));
         }
@@ -270,7 +269,7 @@ public:
         //TODO: Look into using find instead of at everywhere to make this run faster, make sure it doesn't copy.
         if (ListenerMap.find(key) != ListenerMap.end())
         {
-            std::vector<std::unique_ptr<InstanceEventRegisteration>>& invokationList = ListenerMap.at(key);
+            std::vector<std::unique_ptr<InstanceEventRegisteration<TEventSourceType>>>& invokationList = ListenerMap.at(key);
 
             //TODO: Handle removing finished events
             for (auto eventData = invokationList.begin(); eventData != invokationList.end(); eventData++)
@@ -294,7 +293,7 @@ public:
     }
 
 private:
-    std::map<TKeyType, std::vector<std::unique_ptr<InstanceEventRegisteration>>> ListenerMap;
+    std::map<TKeyType, std::vector<std::unique_ptr<InstanceEventRegisteration<TEventSourceType>>>> ListenerMap;
     InstanceEventKeyUnitStrategy<TKeyType, TEventSourceType> KeyParser;
 };
 
@@ -333,7 +332,7 @@ private:
 
 //Condition that completes when a list of spawn ids events have been handled.
 //DO NOT GIVE THIS A VECTOR YOU WANT TO PRESERVE
-class UnitAllSpawnIdListCondition : public InstanceEventCondition
+class UnitAllSpawnIdListCondition : public InstanceEventCondition<Unit>
 {
 public:
     UnitAllSpawnIdListCondition(std::vector<int> spawnIdList)
@@ -384,31 +383,36 @@ private:
     }
 };
 
+//TODO: Rename
+//We brought this out of the class because it turned into a template.
+struct TallyGoal
+{
+    int CurrentCount;
+    int Goal;
+
+    TallyGoal(int goal)
+        : CurrentCount(0), Goal(goal)
+    {
+        //TODO: Validate goal
+    }
+
+    TallyGoal()
+        : CurrentCount(0), Goal(0)
+    {
+
+    }
+};
+
 //Shared tally condition works in such a way that when the tally reaches the
 //WARNING: When using shared tally the event you register will be called for each condition met. Not only once. Register dummy events or keep track of this.
-class SharedTallyConditionDecorator : public InstanceEventCondition
+template<typename TEventSourceType>
+class SharedTallyConditionDecorator : public InstanceEventCondition<TEventSourceType>
 {
 public:
-    struct TallyGoal
-    {
-        int CurrentCount;
-        int Goal;
-
-        TallyGoal(int goal)
-            : CurrentCount(0), Goal(goal)
-        {
-            //TODO: Validate goal
-        }
-
-        TallyGoal()
-            : CurrentCount(0), Goal(0)
-        {
-
-        }
-    };
+    
 
     //Value Towards Goal represents the amount of count this tally condition is worth when the decorated condition completes.
-    SharedTallyConditionDecorator(std::shared_ptr<TallyGoal> sharedTally, std::unique_ptr<InstanceEventCondition> decoratedCondition, int valueTowardsGoal)
+    SharedTallyConditionDecorator(std::shared_ptr<TallyGoal> sharedTally, std::unique_ptr<InstanceEventCondition<TEventSourceType>> decoratedCondition, int valueTowardsGoal)
         : SharedTally(sharedTally), DecoratedCondition(std::move(decoratedCondition)), ValueTowardsGoal(valueTowardsGoal)
     {
         //TODO: Validate tally and fired values
@@ -423,7 +427,7 @@ public:
         return SharedTally->CurrentCount >= SharedTally->Goal;
     }
 
-    void Process(Unit* invoker) override
+    void Process(TEventSourceType* invoker) override
     {
         ASSERT(invoker);
         //Default is always true so do nothing.
@@ -526,15 +530,15 @@ protected:
         RegisterEvent(BossDeathEventManager, entry, functionPointer);
     }
 
+    //TODO: Maybe ditch function pointer template type
     //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
-    template<typename TFunctionPointerType>
-    void RegisterOnNpcDeathEvent(DireMaulNpcEntry entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition> condition)
+    void RegisterOnNpcDeathEvent(DireMaulNpcEntry entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition)
     {
         //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
         //therefore we must push this into a map and wait for the entry/guid map to be registered.
         sLog->outCommand(entry, "Registering NPC Entry: %u with an event callback.", entry);
 
-        RegisterEvent(NpcDeathEventManager, entry, functionPointer, std::move(condition));
+        RegisterEvent<TNpcEntryEnumType, std::function<void(ObjectGuid)>, Unit>(NpcDeathEventManager, entry, functionPointer, std::move(condition));
     }
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
@@ -555,12 +559,13 @@ private:
     //Event managers. Concept here is we have multiple managers and one for each event type.
     InstanceUnitEventListManager<TBossEntryEnumType, Unit> BossDeathEventManager;
     InstanceUnitEventListManager<TNpcEntryEnumType, Unit> NpcDeathEventManager;
+    InstanceUnitEventListManager<TGameObjectEntryType, GameObject> GameObjectStateChangeEventManager;
 
     template<typename TEntryType, typename TFunctionPointerType, typename TEventSourceType>
-    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition> condition)
+    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition<TEventSourceType>> condition)
     {
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
-        std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(std::move(condition), invokable));
+        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration<TEventSourceType>(std::move(condition), invokable));
         manager.RegisterEvent(entry, std::move(registeration));
     }
 
@@ -571,7 +576,7 @@ private:
         sLog->outCommand(0, "Registering event with a default condition.");
 
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
-        std::unique_ptr<InstanceEventRegisteration> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
+        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
         manager.RegisterEvent(entry, std::move(registeration));
     }
 };
