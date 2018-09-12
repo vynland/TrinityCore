@@ -275,6 +275,12 @@ public:
             //TODO: Handle removing finished events
             for (auto eventData = invokationList.begin(); eventData != invokationList.end(); eventData++)
             {
+                //The logic here is that if an event is already finished before we begin this round of processing them it
+                //means that the event is completed and we should not consider it further
+                //this convention exists mostly to help support linked event registerations
+                if ((*eventData).get()->GetCondition()->IsEventReady())
+                    continue;
+
                 (*eventData).get()->GetCondition()->Process(potentialInvoker);
 
                 bool ready = (*eventData).get()->GetCondition()->IsEventReady();
@@ -286,6 +292,16 @@ public:
                     (*eventData).get()->GetInvokable().Invoke(potentialInvoker->GetGUID());
                 }
             }
+
+            //TODO: Might be able to unify this with the above iteration
+            //TODO: Is this the best way to handle it? Iterating a second time?
+            invokationList.erase(std::remove_if(invokationList.begin(), invokationList.end(), [](const auto& e)
+            {
+                //TODO: remove if it is expired.
+                //The logic here is that if the event is ready, then it should have been fired. If it's been fired when we are not interested in the event anymore
+                //and therefore it should be removed.
+                return e.get()->GetCondition()->IsEventReady();
+            }), invokationList.end());
 
             //We should remove the vector if it is empty from the map
             if (invokationList.empty())
