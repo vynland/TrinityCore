@@ -166,8 +166,7 @@ class InstanceEventRegisteration
 {
 public:
     InstanceEventRegisteration(std::unique_ptr<InstanceEventCondition> condition, InstanceEventInvokable invokable)
-        : Invokable(invokable),
-        Condition(std::move(condition))
+        : Condition(std::move(condition)), Invokable(invokable)
     {
 
     }
