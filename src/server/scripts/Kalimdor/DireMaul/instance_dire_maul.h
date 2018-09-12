@@ -377,7 +377,8 @@ public:
         //Default is always true so do nothing.
         auto result = std::find_if(SpawnIdList.begin(), SpawnIdList.end(), [=](int id)
         {
-            if (c->GetSpawnId() == id)
+            //TODO: Switch to uint. May be some that exceed int? I don't know, but we should switch.
+            if (static_cast<int>(c->GetSpawnId()) == id)
                 return true;
             else
                 return false;
