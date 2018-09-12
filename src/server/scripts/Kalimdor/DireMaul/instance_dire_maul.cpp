@@ -40,7 +40,7 @@ public:
             CreateAndRegisterPylonEvent(4, std::move(std::vector<int> { 143510, 143524 }), std::move(std::vector<int> { 143511, 143509 }), pylonOneEvent);
 
             auto pylonTwoEvent = [&](ObjectGuid o) { this->OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry::GO_CRISTAL_2_EVENT); };
-            CreateAndRegisterPylonEvent(4, std::move(std::vector<int> { 143512, 143524 }), std::move(std::vector<int> { 143513, 143515 }), pylonTwoEvent);
+            CreateAndRegisterPylonEvent(4, std::move(std::vector<int> { 143512, 143514 }), std::move(std::vector<int> { 143513, 143515 }), pylonTwoEvent);
 
             auto pylonThreeEvent = [&](ObjectGuid o) { this->OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry::GO_CRISTAL_3_EVENT); };
             CreateAndRegisterPylonEvent(4, std::move(std::vector<int> { 143506, 143505 }), std::move(std::vector<int> { 143508, 143507 }), pylonThreeEvent);
