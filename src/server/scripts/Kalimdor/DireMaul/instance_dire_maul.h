@@ -363,7 +363,7 @@ public:
     bool IsEventReady() const override
     {
         //Spawn id lists are only ready when the count matches the number of spawnids in the list
-        return Count >= SpawnIdList.size();
+        return Count >= static_cast<int>(SpawnIdList.size());
     }
 
     void Process(Unit* invoker) override
