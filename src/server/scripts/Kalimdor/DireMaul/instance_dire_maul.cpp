@@ -10,6 +10,7 @@
 #include "instance_dire_maul.h"
 #include "Log.h"
 #include "GameObject.h"
+#include "ImprovedInstanceScript.h"
 
 class instance_dire_maul : public InstanceMapScript
 {
