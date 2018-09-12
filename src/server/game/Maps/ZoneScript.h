@@ -26,6 +26,7 @@ class GameObject;
 class Unit;
 class WorldObject;
 struct CreatureData;
+enum GOState : uint8;
 
 class TC_GAME_API ZoneScript
 {
@@ -43,6 +44,7 @@ class TC_GAME_API ZoneScript
         virtual void OnGameObjectRemove(GameObject* ) { }
 
         virtual void OnUnitDeath(Unit*) { }
+        virtual void OnGameObjectStateChange(GameObject*, GOState) { }
 
         //All-purpose data storage 64 bit
         virtual ObjectGuid GetGuidData(uint32 /*DataId*/) const { return ObjectGuid::Empty; }

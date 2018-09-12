@@ -41,6 +41,7 @@
 #include "UpdateFieldFlags.h"
 #include "World.h"
 #include <G3D/Quat.h>
+#include "InstanceScript.h"
 
 void GameObjectTemplate::InitializeQueryData()
 {
@@ -2296,6 +2297,20 @@ void GameObject::SetGoState(GOState state)
             collision = !collision;
 
         EnableCollision(collision);
+    }
+
+    //Based on how Unit deaths are dispatched to zone/instances.
+    if (ZoneScript* zoneScript = GetZoneScript())
+        zoneScript->OnGameObjectStateChange(this, state);
+    else
+    {
+        //We will crash worldserver if we don't check this.
+        //It's a method specifically added for this.
+        if (IsMapDefined())
+        {
+            if (InstanceScript* instanceScript = GetInstanceScript())
+                instanceScript->OnGameObjectStateChange(this, state);
+        }
     }
 }
 
