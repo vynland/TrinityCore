@@ -1481,6 +1481,9 @@ void World::LoadConfigSettings(bool reload)
     // Whether to use LoS from game objects
     m_bool_configs[CONFIG_CHECK_GOBJECT_LOS] = sConfigMgr->GetBoolDefault("CheckGameObjectLoS", true);
 
+    // Custom
+    m_bool_configs[CONFIG_ENABLE_LEVEL_60_RDF] = sConfigMgr->GetBoolDefault("Custom.EnableLevel60RDF", false);
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);
