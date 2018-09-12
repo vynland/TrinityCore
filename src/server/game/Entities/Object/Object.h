@@ -373,6 +373,7 @@ class TC_GAME_API WorldObject : public Object, public WorldLocation
 
         virtual void SetMap(Map* map);
         virtual void ResetMap();
+        bool IsMapDefined() const { return m_currMap != nullptr;  }
         Map* GetMap() const { ASSERT(m_currMap); return m_currMap; }
         Map* FindMap() const { return m_currMap; }
         //used to check all object's GetMap() calls when object is not in world!

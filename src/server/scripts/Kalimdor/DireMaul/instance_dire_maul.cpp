@@ -76,6 +76,11 @@ public:
             GameObject* pylon1 = instance->GetGameObject(GetGameObjectEntryContainer().FindByEntry(pylonEntry));
             this->HandleGameObject(ObjectGuid::Empty, true, pylon1);
         }
+
+        void OnGameObjectStateChange(GameObject* go , GOState state) override
+        {
+            sLog->outCommand(state, "GO: %s State: %u", go->GetName(), state);
+        }
     };
 
     void OnPlayerEnter(InstanceMap* /*map*/, Player* /*player*/) override
