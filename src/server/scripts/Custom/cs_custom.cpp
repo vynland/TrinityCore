@@ -16,7 +16,6 @@
  */
 
 #include "Chat.h"
-#include "CustomFunctions.h"
 #include "ObjectMgr.h"
 #include "ReputationMgr.h"
 #include "Mail.h"
