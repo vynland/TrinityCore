@@ -8,6 +8,7 @@
 #include "Map.h"
 #include "Unit.h"
 #include "Log.h"
+#include "GameObject.h"
 
 enum DireMaulBossIndex
 {
@@ -409,8 +410,6 @@ template<typename TEventSourceType>
 class SharedTallyConditionDecorator : public InstanceEventCondition<TEventSourceType>
 {
 public:
-    
-
     //Value Towards Goal represents the amount of count this tally condition is worth when the decorated condition completes.
     SharedTallyConditionDecorator(std::shared_ptr<TallyGoal> sharedTally, std::unique_ptr<InstanceEventCondition<TEventSourceType>> decoratedCondition, int valueTowardsGoal)
         : SharedTally(sharedTally), DecoratedCondition(std::move(decoratedCondition)), ValueTowardsGoal(valueTowardsGoal)
@@ -480,6 +479,12 @@ public:
         }
     }
 
+    void OnGameObjectStateChange(GameObject* go, GOState state) override
+    {
+        sLog->outCommand(state, "GO: %s State: %u", go->GetName(), state);
+        GameObjectStateChangeEventManager.ProcessEvent(go);
+    }
+
     void OnUnitDeath(Unit* u) override
     {
         //When a unit dies we must alert the related event managers
@@ -521,7 +526,7 @@ protected:
 
     //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
     template<typename TFunctionPointerType>
-    void RegisterOnBossCreatureDeathEvent(DireMaulBossEntry entry, TFunctionPointerType functionPointer)
+    void RegisterOnBossCreatureDeathEvent(TBossEntryEnumType entry, TFunctionPointerType functionPointer)
     {
         //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
         //therefore we must push this into a map and wait for the entry/guid map to be registered.
@@ -532,13 +537,18 @@ protected:
 
     //TODO: Maybe ditch function pointer template type
     //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
-    void RegisterOnNpcDeathEvent(DireMaulNpcEntry entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition)
+    void RegisterOnNpcDeathEvent(TNpcEntryEnumType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition)
     {
         //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
         //therefore we must push this into a map and wait for the entry/guid map to be registered.
         sLog->outCommand(entry, "Registering NPC Entry: %u with an event callback.", entry);
 
         RegisterEvent<TNpcEntryEnumType, std::function<void(ObjectGuid)>, Unit>(NpcDeathEventManager, entry, functionPointer, std::move(condition));
+    }
+
+    void RegisterOnGameObjectStateChangeEvent(TGameObjectEntryType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<GameObject>> condition)
+    {
+        RegisterEvent<TGameObjectEntryType, std::function<void(ObjectGuid)>, GameObject>(GameObjectStateChangeEventManager, entry, functionPointer, std::move(condition));
     }
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
