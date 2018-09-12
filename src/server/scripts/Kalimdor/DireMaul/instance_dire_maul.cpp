@@ -14,6 +14,8 @@
 class instance_dire_maul : public InstanceMapScript
 {
 public:
+    const static DireMaulGameObjectEntry PylonEntries[5];
+
     instance_dire_maul() : InstanceMapScript(DireMaulScriptName, 429) { }
 
     InstanceScript* GetInstanceScript(InstanceMap* map) const override
@@ -50,6 +52,27 @@ public:
 
             auto pylonFiveEvent = [&](ObjectGuid o) { this->OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry::GO_CRISTAL_5_EVENT); };
             CreateAndRegisterPylonEvent(4, std::move(std::vector<int> { 143523, 143520 }), std::move(std::vector<int> { 143522, 143521 }), pylonFiveEvent);
+
+            //Now we register the event that we want to happen once all the pylons are done.
+            //THis tally goal is shared between them because we have multiple types of NPCs that contribute to the tally for this event
+            std::shared_ptr<TallyGoal> deactivateAllPylonsGoal(new TallyGoal(5));
+            auto unlockTheImmotharBarrierEvent = [&](ObjectGuid o) { this->UnlockedTheThing(o); };
+
+            //TODO: We don't have to register this right away, we can actually wait until something dies first for performance reasons
+            for (DireMaulGameObjectEntry pylonEntry : PylonEntries)
+            {
+                //TODO: Can we avoid creating N of these?
+                std::unique_ptr<InstanceEventCondition<GameObject>> activeCondition(new GameObjectActiveEventCondition());
+                std::unique_ptr<SharedTallyConditionDecorator<GameObject>> pylonTallyActivate(new SharedTallyConditionDecorator<GameObject>(deactivateAllPylonsGoal, std::move(activeCondition), 1));
+
+                //Register it
+                RegisterOnGameObjectStateChangeEvent(pylonEntry, unlockTheImmotharBarrierEvent, std::move(pylonTallyActivate));
+            }
+        }
+
+        void UnlockedTheThing(ObjectGuid last)
+        {
+            sLog->outCommand(0, "Unlocked immothar.");
         }
 
         void CreateAndRegisterPylonEvent(int goalTotal, std::vector<int> abberationSpawnIds, std::vector<int> manaElementalSpawnIds, InstanceEventInvokable::InstanceEventInvokerFunction callback)
@@ -76,11 +99,6 @@ public:
             GameObject* pylon1 = instance->GetGameObject(GetGameObjectEntryContainer().FindByEntry(pylonEntry));
             this->HandleGameObject(ObjectGuid::Empty, true, pylon1);
         }
-
-        void OnGameObjectStateChange(GameObject* go , GOState state) override
-        {
-            sLog->outCommand(state, "GO: %s State: %u", go->GetName(), state);
-        }
     };
 
     void OnPlayerEnter(InstanceMap* /*map*/, Player* /*player*/) override
@@ -93,6 +111,16 @@ public:
     {
         //Lighthope has some recommended stuff they do on enter and leave to prevent some exploits.
     }
+};
+
+
+const DireMaulGameObjectEntry instance_dire_maul::PylonEntries[5]
+{
+    DireMaulGameObjectEntry::GO_CRISTAL_1_EVENT,
+    DireMaulGameObjectEntry::GO_CRISTAL_2_EVENT,
+    DireMaulGameObjectEntry::GO_CRISTAL_3_EVENT,
+    DireMaulGameObjectEntry::GO_CRISTAL_4_EVENT,
+    DireMaulGameObjectEntry::GO_CRISTAL_5_EVENT
 };
 
 void AddSC_instance_dire_maul()
