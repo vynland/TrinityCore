@@ -18,15 +18,15 @@ enum
 
 enum ImmotharEvent
 {
-    Enrage = 0,
+    Enrage = 1,
 
-    Trample = 1,
+    Trample = 2,
 
-    InfectedBite = 2,
+    InfectedBite = 3,
 
-    EyeOfImmothar = 3,
+    EyeOfImmothar = 4,
 
-    PortalOfImmothar = 4
+    PortalOfImmothar = 5
 };
 
 // boss_immol_thar
