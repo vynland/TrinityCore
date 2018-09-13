@@ -4008,5 +4008,29 @@ Metric.OverallStatusInterval = 1
 Custom.EnableLevel60RDF = 0
 
 #
+# Custom.EnableHealingNerf
+#     Description: Enables the healing nerf inside instances and battlegrounds.
+#     Default:     0 - (Disabled)
+#                  1 - (Enabled)
+
+Custom.EnableHealingNerf = 0
+
+#
+#
+# Custom.FlatPvEHealingNerf
+#     Description: Flat healing nerf inside dungeons and raids.
+#     Default:     0 - (Disabled)
+#
+
+Custom.FlatPvEHealingNerf = 0
+
+#
+# Custom.FlatPvPHealingNerf
+#     Description: Flat healing nerf inside battlegrounds.
+#     Default:     0 - (Disabled)
+#
+
+Custom.FlatPvPHealingNerf = 0
+
 #
 ###################################################################################################
