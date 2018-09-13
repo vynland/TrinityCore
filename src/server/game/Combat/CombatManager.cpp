@@ -20,6 +20,7 @@
 #include "Unit.h"
 #include "CreatureAI.h"
 #include "Player.h"
+#include "ZoneScript.h"
 
 /*static*/ bool CombatManager::CanBeginCombat(Unit const* a, Unit const* b)
 {
@@ -301,6 +302,12 @@ void CombatManager::EndAllPvPCombat()
     if (Creature* cMe = me->ToCreature())
         if (!cMe->CanHaveThreatList())
             cMe->AI()->JustEngagedWith(other);
+
+    //Custom, adds a zone/instance event that fires for when combat starts with unit.
+    if (ZoneScript* zs = me->GetZoneScript())
+    {
+        zs->OnUnitEngaged(me, other);
+    }
 }
 
 void CombatManager::PutReference(ObjectGuid const& guid, CombatReference* ref)

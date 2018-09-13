@@ -46,6 +46,9 @@ class TC_GAME_API ZoneScript
         virtual void OnUnitDeath(Unit*) { }
         virtual void OnGameObjectStateChange(GameObject*, GOState) { }
 
+        //Called when Unit AI calls JustEngaged. Providing Unit AI and Unit Engager.
+        virtual void OnUnitEngaged(Unit*, Unit*) { }
+
         //All-purpose data storage 64 bit
         virtual ObjectGuid GetGuidData(uint32 /*DataId*/) const { return ObjectGuid::Empty; }
         virtual void SetGuidData(uint32 /*DataId*/, ObjectGuid /*Value*/) { }
