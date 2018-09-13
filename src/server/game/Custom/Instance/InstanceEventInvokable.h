@@ -25,6 +25,14 @@ public:
         (Invokable)(invoker);
     }
 
+    template<typename TType, typename TFunctionPointerType> //I couldn't figure out the proper signature, C++ is annoying.
+    static InstanceEventInvokerFunction MakeMemberFunctionEvent(TType* thisPointer, TFunctionPointerType memberFunction)
+    {
+        //Example: [&](ObjectGuid o) { this->OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry::GO_CRISTAL_4_EVENT); };
+        auto func = std::bind(memberFunction, thisPointer, std::placeholders::_1);
+        return static_cast<InstanceEventInvokerFunction>(func);
+    }
+
 private:
     InstanceEventInvokerFunction Invokable;
 };

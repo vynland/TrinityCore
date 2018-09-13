@@ -115,9 +115,28 @@ protected:
         RegisterEvent<TNpcEntryEnumType, std::function<void(ObjectGuid)>, Unit>(NpcDeathEventManager, entry, functionPointer, std::move(condition), type);
     }
 
+    //Registers an event to be dispatched when a Boss Creature is engaged.
+    void RegisterOnBossEngagedEvent(TBossEntryEnumType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition, InstanceEventRegisterationType type)
+    {
+        //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
+        //therefore we must push this into a map and wait for the entry/guid map to be registered.
+        sLog->outCommand(entry, "Registering NPC Entry: %u with an event callback.", entry);
+
+        RegisterEvent<TBossEntryEnumType, std::function<void(ObjectGuid)>, Unit>(BossEngagedEventManager, entry, functionPointer, std::move(condition), type);
+    }
+
     void RegisterOnGameObjectStateChangeEvent(TGameObjectEntryType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<GameObject>> condition, InstanceEventRegisterationType type)
     {
         RegisterEvent<TGameObjectEntryType, std::function<void(ObjectGuid)>, GameObject>(GameObjectStateChangeEventManager, entry, functionPointer, std::move(condition), type);
+    }
+
+    void OnUnitEngaged(Unit* engaged, Unit* engager) override
+    {
+        if (Creature* c = engaged->ToCreature())
+        {
+            if (c->IsDungeonBoss() || c->IsDungeonBoss())
+                BossEngagedEventManager.ProcessEvent(engaged);
+        }
     }
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
