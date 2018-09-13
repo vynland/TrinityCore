@@ -67,7 +67,7 @@ public:
                 std::unique_ptr<SharedTallyConditionDecorator<GameObject>> pylonTallyActivate(new SharedTallyConditionDecorator<GameObject>(deactivateAllPylonsGoal, std::move(activeCondition), 1));
 
                 //Register it
-                RegisterOnGameObjectStateChangeEvent(pylonEntry, unlockTheImmotharBarrierEvent, std::move(pylonTallyActivate));
+                RegisterOnGameObjectStateChangeEvent(pylonEntry, unlockTheImmotharBarrierEvent, std::move(pylonTallyActivate), InstanceEventRegisterationType::SingleUse);
             }
         }
 
@@ -94,7 +94,7 @@ public:
         {
             std::unique_ptr<UnitAllSpawnIdListCondition> spawnIdCondition(new UnitAllSpawnIdListCondition(std::move(spawnIds)));
             std::unique_ptr<SharedTallyConditionDecorator<Unit>> tallyCondition(new SharedTallyConditionDecorator<Unit>(goal, std::move(spawnIdCondition), 2));
-            RegisterOnNpcDeathEvent(entry, callback, std::move(tallyCondition));
+            RegisterOnNpcDeathEvent(entry, callback, std::move(tallyCondition), InstanceEventRegisterationType::SingleUse);
         }
 
         void OnPylonGuardiansGroupDeath(DireMaulGameObjectEntry pylonEntry)
@@ -107,6 +107,11 @@ public:
             GameObject* obj = instance->GetGameObject(GetGameObjectEntryContainer().FindByEntry(entry));
             ASSERT(obj);
             this->HandleGameObject(ObjectGuid::Empty, true, obj);
+        }
+
+        void OnUnitEngaged(Unit* target, Unit* engager) override
+        {
+           //When tendris is pulled we must set everyone in combat.
         }
     };
 

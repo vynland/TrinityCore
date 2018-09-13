@@ -34,6 +34,11 @@ public:
         return Invokable;
     }
 
+    InstanceEventRegisterationType GetRegisterationType() const
+    {
+        return RegisterationType;
+    }
+
 private:
     std::unique_ptr<InstanceEventCondition<TEventSourceType>> Condition;
     InstanceEventInvokable Invokable;

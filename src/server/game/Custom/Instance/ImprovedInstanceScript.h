@@ -95,29 +95,29 @@ protected:
 
     //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
     template<typename TFunctionPointerType>
-    void RegisterOnBossCreatureDeathEvent(TBossEntryEnumType entry, TFunctionPointerType functionPointer)
+    void RegisterOnBossCreatureDeathEvent(TBossEntryEnumType entry, TFunctionPointerType functionPointer, InstanceEventRegisterationType type)
     {
         //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
         //therefore we must push this into a map and wait for the entry/guid map to be registered.
         sLog->outCommand(entry, "Registering Boss Entry: %u with an event callback.", entry);
 
-        RegisterEvent(BossDeathEventManager, entry, functionPointer);
+        RegisterEvent(BossDeathEventManager, entry, functionPointer, type);
     }
 
     //TODO: Maybe ditch function pointer template type
     //Registers an event to be dispatched when a Boss Creature with the provided entry dies.
-    void RegisterOnNpcDeathEvent(TNpcEntryEnumType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition)
+    void RegisterOnNpcDeathEvent(TNpcEntryEnumType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<Unit>> condition, InstanceEventRegisterationType type)
     {
         //If the GUID is the empty guid then we don't have the mapping from entry to guid right now
         //therefore we must push this into a map and wait for the entry/guid map to be registered.
         sLog->outCommand(entry, "Registering NPC Entry: %u with an event callback.", entry);
 
-        RegisterEvent<TNpcEntryEnumType, std::function<void(ObjectGuid)>, Unit>(NpcDeathEventManager, entry, functionPointer, std::move(condition));
+        RegisterEvent<TNpcEntryEnumType, std::function<void(ObjectGuid)>, Unit>(NpcDeathEventManager, entry, functionPointer, std::move(condition), type);
     }
 
-    void RegisterOnGameObjectStateChangeEvent(TGameObjectEntryType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<GameObject>> condition)
+    void RegisterOnGameObjectStateChangeEvent(TGameObjectEntryType entry, std::function<void(ObjectGuid)> functionPointer, std::unique_ptr<InstanceEventCondition<GameObject>> condition, InstanceEventRegisterationType type)
     {
-        RegisterEvent<TGameObjectEntryType, std::function<void(ObjectGuid)>, GameObject>(GameObjectStateChangeEventManager, entry, functionPointer, std::move(condition));
+        RegisterEvent<TGameObjectEntryType, std::function<void(ObjectGuid)>, GameObject>(GameObjectStateChangeEventManager, entry, functionPointer, std::move(condition), type);
     }
 
     //TODO: Should these methods be apart of the instancescript? Or another object?
@@ -139,23 +139,24 @@ private:
     InstanceUnitEventListManager<TBossEntryEnumType, Unit> BossDeathEventManager;
     InstanceUnitEventListManager<TNpcEntryEnumType, Unit> NpcDeathEventManager;
     InstanceUnitEventListManager<TGameObjectEntryType, GameObject> GameObjectStateChangeEventManager;
+    InstanceUnitEventListManager<TBossEntryEnumType, Unit> BossEngagedEventManager;
 
     template<typename TEntryType, typename TFunctionPointerType, typename TEventSourceType>
-    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition<TEventSourceType>> condition)
+    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, std::unique_ptr<InstanceEventCondition<TEventSourceType>> condition, InstanceEventRegisterationType type)
     {
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
-        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration<TEventSourceType>(std::move(condition), invokable));
+        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration<TEventSourceType>(std::move(condition), invokable, type));
         manager.RegisterEvent(entry, std::move(registeration));
     }
 
     //We have a second template with no condition parameter because we can't pass Default to the other one. It does a move.
     template<typename TEntryType, typename TFunctionPointerType, typename TEventSourceType>
-    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer)
+    void RegisterEvent(InstanceUnitEventListManager<TEntryType, TEventSourceType>& manager, TEntryType& entry, TFunctionPointerType functionPointer, InstanceEventRegisterationType type)
     {
         sLog->outCommand(0, "Registering event with a default condition.");
 
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
-        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable));
+        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable, type));
         manager.RegisterEvent(entry, std::move(registeration));
     }
 };
