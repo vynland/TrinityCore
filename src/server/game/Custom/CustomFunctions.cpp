@@ -77,6 +77,8 @@ enum AreaIds
 
 float CustomFunctions::GetHealingNerfPercent(Unit* target) const
 {
+    if (target->GetTypeId() != TYPEID_PLAYER)
+        return 0.0f;
 
     if (target->GetMap()->IsBattlegroundOrArena())
         return sWorld->getFloatConfig(CONFIG_FLAT_PVP_HEALING_NERF_PERCENT);
