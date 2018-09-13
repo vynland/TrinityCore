@@ -37,7 +37,7 @@ static SFMTRand* GetRng()
     return rand;
 }
 
-uint32 urandc(std::chrono::seconds min, std::chrono::seconds max)
+uint32 urandc(std::chrono::milliseconds min, std::chrono::milliseconds max)
 {
     return urand(static_cast<uint32>(min.count()), static_cast<uint32>(max.count()));
 }
