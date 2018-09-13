@@ -78,17 +78,17 @@ public:
     }
 
 protected:
-    const ObjectEntryLookupContainer<TBossEntryEnumType, ObjectGuid> GetBossEntryContainer() const
+    ObjectEntryLookupContainer<TBossEntryEnumType, ObjectGuid>& GetBossEntryContainer()
     {
         return BossEntryToGuidMap;
     }
 
-    const ObjectEntryLookupContainer<TGameObjectEntryType, ObjectGuid> GetGameObjectEntryContainer() const
+    ObjectEntryLookupContainer<TGameObjectEntryType, ObjectGuid>& GetGameObjectEntryContainer()
     {
         return GameObjectEntryToGuidMap;
     }
 
-    const ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>> GetNpcEntryContainer() const
+    ObjectEntryLookupContainer<TNpcEntryEnumType, std::vector<ObjectGuid>>& GetNpcEntryContainer()
     {
         return NpcEntryToGuidsMap;
     }

@@ -21,14 +21,9 @@ public:
         return true;
     }
 
-    TStorageType FindByEntry(TEntryEnumType entry) const
+    TStorageType& FindByEntry(TEntryEnumType entry)
     {
-        auto f = InternalMap.find(entry);
-        if (f != InternalMap.end())
-            return (*f).second;
-
-        //TODO: Handle ObjectGuid case better somehow
-        return TStorageType();
+        return InternalMap.at(entry);
     }
 private:
     std::map<TEntryEnumType, TStorageType> InternalMap;
