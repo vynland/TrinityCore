@@ -175,7 +175,7 @@ private:
         sLog->outCommand(0, "Registering event with a default condition.");
 
         InstanceEventInvokable invokable(static_cast<InstanceEventInvokable::InstanceEventInvokerFunction>(functionPointer));
-        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration(InstanceEventCondition::Default, invokable, type));
+        std::unique_ptr<InstanceEventRegisteration<TEventSourceType>> registeration(new InstanceEventRegisteration<TEventSourceType>(std::unique_ptr<InstanceEventCondition<TEventSourceType>>(new InstanceEventCondition<TEventSourceType>()), invokable, type));
         manager.RegisterEvent(entry, std::move(registeration));
     }
 };

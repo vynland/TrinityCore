@@ -71,9 +71,29 @@ public:
             }
 
             auto tendrisEvent = InstanceEventInvokable::MakeMemberFunctionEvent(this, &instance_dire_maul_InstanceMapScript::AggroWarpWoodsToPlayers);
-
             //Event registers for Tendris that makes all the warpwoods attack players if pulled.
             RegisterOnBossEngagedEvent(DireMaulBossEntry::NPC_TENDRIS, tendrisEvent, std::unique_ptr<InstanceEventCondition<Unit>>(new InstanceEventCondition<Unit>()), InstanceEventRegisterationType::Persistent);
+
+            //When immothar dies we need to deal with Prince
+            RegisterOnBossCreatureDeathEvent(DireMaulBossEntry::NPC_IMMOL_THAR, InstanceEventInvokable::MakeMemberFunctionEvent(this, &instance_dire_maul_InstanceMapScript::OnImmotharDeath), InstanceEventRegisterationType::SingleUse);
+        }
+
+        void OnImmotharDeath(ObjectGuid guid)
+        {
+            //It should exist, but to be safe we'll check anyway
+            if (Creature* tortheldrin = instance->GetCreature(GetBossEntryContainer().FindByEntry(DireMaulBossEntry::NPC_TORTHELDRIN)))
+            {
+                //Say/Yell the text
+                tortheldrin->Yell(9407);
+
+                //He doesn't have the first 2 flags, but Nost removes them. Maybe they set in DB?
+                tortheldrin->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
+                tortheldrin->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+
+                //TODO: Is this the correct way to make this aggressive? We can change his react state too, if that is the intended behavior.
+                tortheldrin->SetFaction(FACTION_MONSTER);
+            }
+            //TODO: Should probably log an error in the second case.
         }
 
         void UnlockedTheThing(ObjectGuid last)

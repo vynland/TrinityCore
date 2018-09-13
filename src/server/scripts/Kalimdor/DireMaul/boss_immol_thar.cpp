@@ -77,6 +77,10 @@ public:
                 //Resets the target's threat to 0.
                 this->ModifyThreatByPercent(target, -100);
                 events.Repeat(urandc(17s, 24s));
+
+                //Nostalrius actually puts the teleported person in front of the boss
+                //but the spell definition says the position is DB defined with TARGET_DEST_DB
+                //so I don't know what to do.
                 DoCast(target, SPELL_PORTAL_OF_IMMOL_THAR);
             }
             break;
