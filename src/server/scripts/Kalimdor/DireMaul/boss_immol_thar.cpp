@@ -43,6 +43,8 @@ public:
         events.ScheduleEvent(ImmotharEvent::InfectedBite, urandc(2s, 4s));
         events.ScheduleEvent(ImmotharEvent::EyeOfImmothar, urandc(7s, 12s));
         events.ScheduleEvent(ImmotharEvent::PortalOfImmothar, urandc(10s, 14s));
+
+        sLog->outCommand(0, "Testing urandc: %u", urandc(10s, 20s));
     }
 
     void ExecuteEvent(uint32 eventId) override
@@ -52,6 +54,8 @@ public:
 
     void HandleImmotharEvents(ImmotharEvent eventId)
     {
+        sLog->outCommand(0, "Immothar event: %u", eventId);
+
         switch (eventId)
         {
         case ImmotharEvent::Enrage:
@@ -73,11 +77,14 @@ public:
                 //Resets the target's threat to 0.
                 this->ModifyThreatByPercent(target, -100);
                 events.Repeat(urandc(17s, 24s));
+                DoCast(target, SPELL_PORTAL_OF_IMMOL_THAR);
             }
             break;
         case ImmotharEvent::Trample:
             DoCast(SPELL_TRAMPLE);
             events.Repeat(urandc(9s, 14s));
+            break;
+        default:
             break;
         }
     }
