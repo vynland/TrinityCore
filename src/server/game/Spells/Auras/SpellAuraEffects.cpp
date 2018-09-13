@@ -45,6 +45,8 @@
 #include "WorldPacket.h"
 #include <numeric>
 
+#include "CustomFunctions.h"
+
 //
 // EFFECT HANDLER NOTES
 //
@@ -5365,6 +5367,12 @@ void AuraEffect::HandlePeriodicHealAurasTick(Unit* target, Unit* caster) const
 
     TC_LOG_DEBUG("spells.periodic", "PeriodicTick: %s heal of %s for %u health inflicted by %u",
         GetCasterGUID().ToString().c_str(), target->GetGUID().ToString().c_str(), damage, GetId());
+
+    if (sWorld->getBoolConfig(CONFIG_ENABLE_HEALING_NERF))
+    {
+        if (sCustomFunctions->IsSpellAffectedByHealingNerf(m_spellInfo->Id))
+            damage -= CalculatePct(damage, sCustomFunctions->GetHealingNerfPercent(caster));
+    }
 
     uint32 heal = damage;
 
