@@ -3995,3 +3995,18 @@ Metric.OverallStatusInterval = 1
 
 #
 ###################################################################################################
+
+###################################################################################################
+# CUSTOM FEATURES
+#
+# Custom.EnableLevel60RDF
+#     Description: Enables the vanilla Random Dungeon Finder for players at level 58 or higher.
+#                  Normally it is disabled seeing how they can only join TBC dungeons at level.
+#     Default:     0 - (Disabled)
+#                  1 - (Enabled)
+
+Custom.EnableLevel60RDF = 0
+
+#
+#
+###################################################################################################

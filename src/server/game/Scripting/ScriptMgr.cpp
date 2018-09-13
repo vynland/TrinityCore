@@ -1961,6 +1961,12 @@ void ScriptMgr::OnPlayerRepop(Player* player)
     FOREACH_SCRIPT(PlayerScript)->OnPlayerRepop(player);
 }
 
+// Custom
+void ScriptMgr::OnPlayerBattlegroundEnd(Player* player, uint32 mapId)
+{
+    FOREACH_SCRIPT(PlayerScript)->OnPlayerBattlegroundEnd(player, mapId);
+}
+
 // Account
 void ScriptMgr::OnAccountLogin(uint32 accountId)
 {
