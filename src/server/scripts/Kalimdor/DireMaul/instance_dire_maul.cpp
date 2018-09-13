@@ -69,6 +69,11 @@ public:
                 //Register it
                 RegisterOnGameObjectStateChangeEvent(pylonEntry, unlockTheImmotharBarrierEvent, std::move(pylonTallyActivate), InstanceEventRegisterationType::SingleUse);
             }
+
+            auto tendrisEvent = InstanceEventInvokable::MakeMemberFunctionEvent(this, &instance_dire_maul_InstanceMapScript::AggroWarpWoodsToPlayers);
+
+            //Event registers for Tendris that makes all the warpwoods attack players if pulled.
+            RegisterOnBossEngagedEvent(DireMaulBossEntry::NPC_TENDRIS, tendrisEvent, std::unique_ptr<InstanceEventCondition<Unit>>(new InstanceEventCondition<Unit>()), InstanceEventRegisterationType::Persistent);
         }
 
         void UnlockedTheThing(ObjectGuid last)
@@ -109,9 +114,23 @@ public:
             this->HandleGameObject(ObjectGuid::Empty, true, obj);
         }
 
-        void OnUnitEngaged(Unit* target, Unit* engager) override
+        void AggroWarpWoodsToPlayers(ObjectGuid& tendrisGuid)
         {
-           //When tendris is pulled we must set everyone in combat.
+            sLog->outCommand(0, "About to aggro all protectors.");
+
+            //When tendris is pulled we must set everyone in combat.
+            for (auto npcGuid : GetNpcEntryContainer().FindByEntry(DireMaulNpcEntry::NPC_TENDRIS_PROTECTOR))
+            {
+                if (Creature* c = instance->GetCreature(npcGuid))
+                {
+                    sLog->outCommand(0, "Aggroing Protector with GUID: %u", c->GetGUID().GetCounter());
+                    if (c->IsAlive())
+                    {
+                        //TODO: Is AI ever null?
+                        c->AI()->DoZoneInCombat();
+                    }
+                }
+            }
         }
     };
 
