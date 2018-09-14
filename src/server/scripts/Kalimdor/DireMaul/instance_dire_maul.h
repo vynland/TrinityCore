@@ -113,4 +113,10 @@ inline void DisableUnit(Unit* const unit)
     unit->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 }
 
+template <class AI, class T>
+inline AI* GetDireMaulAI(T* obj)
+{
+    return GetInstanceAI<AI>(obj, DireMaulScriptName);
+}
+
 #endif

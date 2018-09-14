@@ -27,6 +27,8 @@
 #include "SpellAuraEffects.h"
 #include "SpellMgr.h"
 #include "SpellScript.h"
+#include "World.h"
+#include "CustomFunctions.h"
 
 enum PriestSpells
 {
@@ -1020,6 +1022,10 @@ class spell_pri_power_word_shield : public SpellScriptLoader
 
                     // Focused Power
                     amount *= caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_DONE_PERCENT);
+
+                    // Custom: Healing nerfs also apply to Power Word: Shield
+                    if (sWorld->getBoolConfig(CONFIG_ENABLE_HEALING_NERF))
+                        amount -= CalculatePct(amount, sCustomFunctions->GetHealingNerfPercent(caster));
                 }
             }
 

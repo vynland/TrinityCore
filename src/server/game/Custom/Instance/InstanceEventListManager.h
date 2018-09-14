@@ -92,35 +92,36 @@ public:
         {
             std::vector<std::unique_ptr<InstanceEventRegisteration<TEventSourceType>>>& invokationList = ListenerMap.at(key);
 
-            //TODO: Handle removing finished events
-            for (auto eventData = invokationList.begin(); eventData != invokationList.end(); eventData++)
+            invokationList.erase(std::remove_if(invokationList.begin(), invokationList.end(), [&](const auto& eventData)
             {
-                //The logic here is that if an event is already finished before we begin this round of processing them it
-                //means that the event is completed and we should not consider it further
-                //this convention exists mostly to help support linked event registerations
-                if ((*eventData).get()->GetCondition()->IsEventReady())
-                    continue;
+                //TODO: This is kinda a hack, to support linked events. We check if they're ready, which they shouldn't be, because we haven't processed anything yet
+                //if they're ready it means they are likely a linked event
+                if (eventData.get()->GetRegisterationType() == InstanceEventRegisterationType::SingleUse && eventData->GetCondition()->IsEventReady())
+                    return true;
 
-                (*eventData).get()->GetCondition()->Process(potentialInvoker);
+                eventData->GetCondition()->Process(potentialInvoker);
 
-                bool ready = (*eventData).get()->GetCondition()->IsEventReady();
+                bool ready = eventData.get()->GetCondition()->IsEventReady();
 
                 sLog->outCommand(0, "GUID: %u about to Fire Event: (0 False) (1 True) %u. Name: %s", potentialInvoker->GetGUID().GetCounter(), ready, potentialInvoker->GetName());
 
                 if (ready)
                 {
-                    (*eventData).get()->GetInvokable().Invoke(potentialInvoker->GetGUID());
-                }
-            }
+                    eventData.get()->GetInvokable().Invoke(potentialInvoker->GetGUID());
 
-            //TODO: Might be able to unify this with the above iteration
-            //TODO: Is this the best way to handle it? Iterating a second time?
-            invokationList.erase(std::remove_if(invokationList.begin(), invokationList.end(), [](const auto& e)
-            {
-                //TODO: remove if it is expired.
-                //The logic here is that if the event is ready, then it should have been fired. If it's been fired when we are not interested in the event anymore
-                //and therefore it should be removed.
-                return e.get()->GetCondition()->IsEventReady();
+                    if ((eventData.get()->GetRegisterationType() == InstanceEventRegisterationType::SingleUse))
+                        return true;
+                    else
+                    {
+                        //TODO: Implement a reset for conditions.
+                        //it is persistent if it's not single use
+                        //therefore we must call reset on the event and not remove it
+                        return false;
+                    }
+                }
+                else
+                    return false;
+
             }), invokationList.end());
 
             //We should remove the vector if it is empty from the map

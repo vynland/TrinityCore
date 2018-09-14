@@ -109,6 +109,10 @@ void AddSC_thunder_bluff();
 void AddSC_ungoro_crater();
 void AddSC_winterspring();
 
+//DireMaul Bosses
+void AddSC_boss_immol_thar();
+void AddSC_boss_prince_tortheldrin();
+
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
 void AddKalimdorScripts()
@@ -205,4 +209,8 @@ void AddKalimdorScripts()
     AddSC_thunder_bluff();
     AddSC_ungoro_crater();
     AddSC_winterspring();
+
+    //DireMaul Bosses
+    AddSC_boss_immol_thar();
+    AddSC_boss_prince_tortheldrin();
 }

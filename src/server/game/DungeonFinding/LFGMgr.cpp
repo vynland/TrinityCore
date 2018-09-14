@@ -1503,6 +1503,9 @@ LfgDungeonSet const& LFGMgr::GetDungeonsByRandom(uint32 randomdungeon)
 */
 LfgReward const* LFGMgr::GetRandomDungeonReward(uint32 dungeon, uint8 level)
 {
+    if (sWorld->getBoolConfig(CONFIG_ENABLE_LEVEL_60_RDF) && level > 58)
+        level = 58;
+
     LfgReward const* rew = nullptr;
     LfgRewardContainerBounds bounds = RewardMapStore.equal_range(dungeon & 0x00FFFFFF);
     for (LfgRewardContainer::const_iterator itr = bounds.first; itr != bounds.second; ++itr)
@@ -1629,6 +1632,9 @@ LfgLockMap const LFGMgr::GetLockedDungeons(ObjectGuid guid)
     uint8 expansion = player->GetSession()->Expansion();
     LfgDungeonSet const& dungeons = GetDungeonsByRandom(0);
     bool denyJoin = !player->GetSession()->HasPermission(rbac::RBAC_PERM_JOIN_DUNGEON_FINDER);
+
+    if (sWorld->getBoolConfig(CONFIG_ENABLE_LEVEL_60_RDF) && level > 58)
+        level = 58;
 
     for (LfgDungeonSet::const_iterator it = dungeons.begin(); it != dungeons.end(); ++it)
     {
@@ -2066,6 +2072,9 @@ uint32 LFGMgr::GetLFGDungeonEntry(uint32 id)
 
 LfgDungeonSet LFGMgr::GetRandomAndSeasonalDungeons(uint8 level, uint8 expansion)
 {
+    if (sWorld->getBoolConfig(CONFIG_ENABLE_LEVEL_60_RDF) && level > 58)
+        level = 58;
+
     LfgDungeonSet randomDungeons;
     for (lfg::LFGDungeonContainer::const_iterator itr = LfgDungeonStore.begin(); itr != LfgDungeonStore.end(); ++itr)
     {

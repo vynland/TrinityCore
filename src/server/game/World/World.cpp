@@ -1481,6 +1481,14 @@ void World::LoadConfigSettings(bool reload)
     // Whether to use LoS from game objects
     m_bool_configs[CONFIG_CHECK_GOBJECT_LOS] = sConfigMgr->GetBoolDefault("CheckGameObjectLoS", true);
 
+    // Custom
+    m_bool_configs[CONFIG_ENABLE_LEVEL_60_RDF] = sConfigMgr->GetBoolDefault("Custom.EnableLevel60RDF", false);
+
+    // Healing nerf
+    m_bool_configs[CONFIG_ENABLE_HEALING_NERF] = sConfigMgr->GetBoolDefault("Custom.EnableHealingNerf", false);
+    m_float_configs[CONFIG_FLAT_PVE_HEALING_NERF_PERCENT] = sConfigMgr->GetFloatDefault("Custom.FlatPvEHealingNerf", 0.0f);
+    m_float_configs[CONFIG_FLAT_PVP_HEALING_NERF_PERCENT] = sConfigMgr->GetFloatDefault("Custom.FlatPvPHealingNerf", 0.0f);
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);

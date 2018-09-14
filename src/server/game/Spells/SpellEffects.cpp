@@ -60,6 +60,8 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#include "CustomFunctions.h"
+
 SpellEffectHandlerFn SpellEffectHandlers[TOTAL_SPELL_EFFECTS] =
 {
     &Spell::EffectNULL,                                     //  0
@@ -1408,6 +1410,10 @@ void Spell::EffectHeal(SpellEffIndex effIndex)
         addhealth = unitCaster->SpellHealingBonusDone(unitTarget, m_spellInfo, addhealth, HEAL, effIndex, { });
 
     addhealth = unitTarget->SpellHealingBonusTaken(unitCaster, m_spellInfo, addhealth, HEAL);
+
+    if (sWorld->getBoolConfig(CONFIG_ENABLE_HEALING_NERF) && m_caster->ToUnit())
+        if (sCustomFunctions->IsSpellAffectedByHealingNerf(m_spellInfo->Id))
+            addhealth -= CalculatePct(addhealth, sCustomFunctions->GetHealingNerfPercent(m_caster->ToUnit()));
 
     // Remove Grievious bite if fully healed
     if (unitTarget->HasAura(48920) && (unitTarget->GetHealth() + addhealth >= unitTarget->GetMaxHealth()))

@@ -6,14 +6,17 @@ template<typename TEventSourceType>
 class InstanceEventCondition
 {
 public:
-    InstanceEventCondition() { }
+    InstanceEventCondition()
+        : isReady(false)
+    {
+    }
 
     static InstanceEventCondition<TEventSourceType> Default;
 
     //Indicates if the event is ready to be dispatched.
     virtual bool IsEventReady() const
     {
-        return true;
+        return isReady;
     }
 
     //Process the event source.
@@ -21,8 +24,11 @@ public:
     {
         ASSERT(invoker);
         //Default is always true so do nothing.
+        isReady = true;
         return;
     }
+private:
+    bool isReady;
 };
 
 #endif
