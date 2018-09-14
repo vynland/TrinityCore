@@ -1,0 +1,2 @@
+-- Lord Vyletongue will now correctly use Putrid Breath
+INSERT INTO `smart_scripts` VALUES (12236, 0, 4, 0, 4, 0, 100, 0, 0, 0, 0, 0, 0, 11, 21080, 4, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 'On Aggro - Cast Putrid Breath on self');
