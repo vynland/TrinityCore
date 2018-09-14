@@ -111,6 +111,7 @@ void AddSC_winterspring();
 
 //DireMaul Bosses
 void AddSC_boss_immol_thar();
+void AddSC_boss_prince_tortheldrin();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -211,4 +212,5 @@ void AddKalimdorScripts()
 
     //DireMaul Bosses
     AddSC_boss_immol_thar();
+    AddSC_boss_prince_tortheldrin();
 }
