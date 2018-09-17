@@ -2710,6 +2710,28 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         // Get Data Needed for Diminishing Returns, some effects may have multiple auras, so this must be done on spell hit, not aura add
         bool triggered = (m_triggeredByAuraSpell != nullptr);
         hitInfo.DRGroup = m_spellInfo->GetDiminishingReturnsGroupForSpell(triggered);
+        bool shouldNotApplyDR = false;
+
+        //We have to check after BuildEffectMaskForOwner and all the other calculators because it must be built regardless of DR calculations
+        //Everything below this is DR calculations, for creatures we want to skip DR calculation
+        if (Creature* creatureCaster = m_caster->ToCreature())
+        {
+            //Pets/hunterpets could be considered creatures too
+            //and we want the abilities they cast to DR. So we should
+            //check those specially
+            if (creatureCaster->HasUnitTypeMask(INT_MAX)) //checks all masks (pet, hunterpet, summon and etc
+            {
+                if (Unit* casterOwner = creatureCaster->GetOwner())
+                {
+                    //If it's not a player owned creature then we skip DR, otherwise even pets need DR if the player owns it.
+                    if (casterOwner->GetTypeId() != TypeID::TYPEID_PLAYER)
+                        shouldNotApplyDR = true;
+                }
+            }
+            else
+                //At this point it's a creature but not a summoned one so we should
+                shouldNotApplyDR = true;
+        }
 
         DiminishingLevels diminishLevel = DIMINISHING_LEVEL_1;
         if (hitInfo.DRGroup)
@@ -2718,7 +2740,8 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
             DiminishingReturnsType type = m_spellInfo->GetDiminishingReturnsGroupType(triggered);
             // Increase Diminishing on unit, current informations for actually casts will use values above
             if (type == DRTYPE_ALL || (type == DRTYPE_PLAYER && unit->IsAffectedByDiminishingReturns()))
-                unit->IncrDiminishing(m_spellInfo, triggered);
+                if(!shouldNotApplyDR)
+                    unit->IncrDiminishing(m_spellInfo, triggered);
         }
 
         // Now Reduce spell duration using data received at spell hit
@@ -2742,7 +2765,7 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
         hitInfo.AuraDuration = Aura::CalcMaxDuration(hitInfo.AuraSpellInfo, origCaster);
 
         // unit is immune to aura if it was diminished to 0 duration
-        if (!hitInfo.Positive && !unit->ApplyDiminishingToDuration(hitInfo.AuraSpellInfo, triggered, hitInfo.AuraDuration, origCaster, diminishLevel))
+        if (!shouldNotApplyDR && !hitInfo.Positive && !unit->ApplyDiminishingToDuration(hitInfo.AuraSpellInfo, triggered, hitInfo.AuraDuration, origCaster, diminishLevel))
             if (std::all_of(std::begin(hitInfo.AuraSpellInfo->Effects), std::end(hitInfo.AuraSpellInfo->Effects), [](SpellEffectInfo const& effInfo) { return !effInfo.IsEffect() || effInfo.Effect == SPELL_EFFECT_APPLY_AURA; }))
                 return SPELL_MISS_IMMUNE;
     }
