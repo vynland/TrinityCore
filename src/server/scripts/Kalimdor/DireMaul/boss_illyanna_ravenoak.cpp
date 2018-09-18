@@ -162,6 +162,20 @@ public:
         events.ScheduleEvent(FerraEvents::IllyanaCombatCheck, 300ms); //we should check as soon as we are pulled
     }
 
+    void Reset() override
+    {
+        //If we reset we should check Illyana state.
+        //Ferra will need to be respawned if we are alive and ferra is dead
+        if (Creature* illyana = FindIllyanna())
+        {
+            //If illyana is dead we want to respawn her, I think this is the appropriate behavior.
+            if (illyana->isDead())
+            {
+                illyana->Respawn(true);
+            }
+        }
+    }
+
     void ExecuteEvent(uint32 eventId) override
     {
         HandleFerraEvents(static_cast<FerraEvents>(eventId));
@@ -184,7 +198,7 @@ public:
         case FerraEvents::IllyanaCombatCheck:
             //Like illyana we check to make sure illyana is in combat if ferra is
             //TODO: Consolidate duplicate code shared between this hack to make linked bosses stay in combat no matter what.
-            if (Creature* ill = this->instance->GetCreature(DMDataTypes::Illyanna_Ravenoak))
+            if (Creature* ill = FindIllyanna())
             {
                 //Check if in combat to prevent split pulling exploits
                 if (!ill->IsInCombat())
@@ -200,6 +214,11 @@ public:
             }
             break;
         }
+    }
+
+    Creature* FindIllyanna()
+    {
+        return this->instance->GetCreature(DMDataTypes::Illyanna_Ravenoak);
     }
 };
 
