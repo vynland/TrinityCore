@@ -9,11 +9,11 @@ MIT LICENSED
 
 enum IllyannaSpells
 {
-    Volley = 22908,
-    ArcaneBlast = 22940,
-    ConcussiveShot = 22914,
-    ImmolationTrap = 22910,
-    AimedShot = 20904,
+    SPELL_VOLLEY = 22908,
+    SPELL_ARCANEBLAST = 22940,
+    SPELL_CONCUSSIVESHOT = 22914,
+    SPELL_IMMOLATIONTRAP = 22910,
+    SPELL_AIMEDSHOT = 20904,
 };
 
 enum IllyannaEvents
@@ -61,27 +61,27 @@ public:
         case IllyannaEvents::Volley:
             //TODO: This may be exploitable by LoS. Need mangos SpellCastResult system in TC.
             //Smart script targets victim with volley, and rarely repeats every 1 minute
-            DoCastVictim(IllyannaSpells::Volley);
+            DoCastVictim(IllyannaSpells::SPELL_VOLLEY);
             events.Repeat(urandc(60s, 65s));
             break;
         case IllyannaEvents::ArcaneBlast:
             //TODO: Same potential exploit as above.
             //Smart script targets victim with arcane blast.
-            DoCastVictim(IllyannaSpells::ArcaneBlast);
+            DoCastVictim(IllyannaSpells::SPELL_ARCANEBLAST);
             events.Repeat(urandc(6s, 9s));
             break;
         case IllyannaEvents::ConcussiveShot:
             //smart scripts target victim
-            DoCastVictim(IllyannaSpells::ConcussiveShot);
+            DoCastVictim(IllyannaSpells::SPELL_CONCUSSIVESHOT);
             events.Repeat(urandc(12s, 15s));
             break;
         case IllyannaEvents::ImmolationTrap:
             //Immolation trap is abit different, it casts the spell on herself (placing it under here)
             //But for some reason smart scripts also checks that the aura is not present. Does this even make sense??
             //The target is self, seems very odd.
-            if (!me->HasAura(IllyannaSpells::ImmolationTrap))
+            if (!me->HasAura(IllyannaSpells::SPELL_IMMOLATIONTRAP))
             {
-                DoCastSelf(IllyannaSpells::ImmolationTrap);
+                DoCastSelf(IllyannaSpells::SPELL_IMMOLATIONTRAP);
                 events.Repeat(urandc(25s, 35s));
             }
             else
