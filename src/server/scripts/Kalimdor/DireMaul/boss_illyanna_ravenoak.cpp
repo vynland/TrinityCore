@@ -18,14 +18,30 @@ enum IllyannaSpells
 
 enum IllyannaEvents
 {
-    Volley,
-    ArcaneBlast,
-    ConcussiveShot,
-    ImmolationTrap,
-    AimedShot,
+    Volley = 1,
+    ArcaneBlast = 2,
+    ConcussiveShot = 3,
+    ImmolationTrap = 4,
+    AimedShot = 5,
 
     //Non-spell events
-    FerraCombatCheck
+    FerraCombatCheck = 6
+};
+
+enum FerraSpells
+{
+    SPELL_CHARGE = 22911,
+    SPELL_MAUL = 17156
+};
+
+enum FerraEvents
+{
+    Charge = 1,
+
+    Maul = 2,
+
+    //Non-spell events
+    IllyanaCombatCheck = 3
 };
 
 // boss_ill_raven
@@ -37,7 +53,6 @@ public:
     void JustEngagedWith(Unit* /*who*/) override
     {
         _JustEngagedWith();
-        //events.ScheduleEvent(ImmotharEvent::Enrage, 50s);
 
         //These timings are based on smart scripts from TC. No Nost data available.
         events.ScheduleEvent(IllyannaEvents::Volley, urandc(7s, 12s));
@@ -51,8 +66,18 @@ public:
 
     void Reset() override
     {
+        BossAI::Reset();
+
         //If we reset we should check Ferra state.
         //Ferra will need to be respawned if we are alive and ferra is dead
+        if (Creature* ferra = FindFerra())
+        {
+            //If ferra is dead we want to respawn her, ferra is not summoned or a pet so it's not handled automatically.
+            if (ferra->isDead())
+            {
+                ferra->Respawn(true);
+            }
+        }
     }
 
     void ExecuteEvent(uint32 eventId) override
@@ -94,7 +119,8 @@ public:
                 events.Repeat(500ms); //if it fails we should retry, don't put on CD.
             break;
         case IllyannaEvents::FerraCombatCheck:
-            if (Creature* ferra = this->instance->GetCreature(DMDataTypes::Ferra))
+            //TODO: Consolidate duplicate code shared between this hack to make linked bosses stay in combat no matter what.
+            if (Creature* ferra = FindFerra())
             {
                 //Check if in combat to prevent split pulling exploits
                 if (!ferra->IsInCombat())
@@ -111,9 +137,74 @@ public:
             break;
         }
     }
+
+    Creature* FindFerra()
+    {
+        return this->instance->GetCreature(DMDataTypes::Ferra);
+    }
+};
+
+struct boss_ferra : public BossAI
+{
+public:
+    boss_ferra(Creature* creature) : BossAI(creature, DMDataTypes::Ferra) { }
+
+    void JustEngagedWith(Unit* /*who*/) override
+    {
+        _JustEngagedWith();
+
+        //Nost charges instantly
+        events.ScheduleEvent(FerraEvents::Charge, 0);
+        events.ScheduleEvent(FerraEvents::Maul, urandc(5s, 10s));
+
+        this->DoZoneInCombat(); //this will help mitigate against split pulling ferra and illyana
+        me->SetNoCallAssistance(true); //this is what Nost does
+        events.ScheduleEvent(FerraEvents::IllyanaCombatCheck, 300ms); //we should check as soon as we are pulled
+    }
+
+    void ExecuteEvent(uint32 eventId) override
+    {
+        HandleFerraEvents(static_cast<FerraEvents>(eventId));
+    }
+
+    void HandleFerraEvents(FerraEvents eventId)
+    {
+        switch (eventId)
+        {
+            //DMDataTypes::Illyanna_Ravenoak
+        case FerraEvents::Charge:
+            //Vmangos/nost charges at current target, then reshecules the event to happen about 8 seconds later
+            DoCastVictim(FerraSpells::SPELL_CHARGE);
+            events.Repeat(urandc(6s, 10s));
+            break;
+        case FerraEvents::Maul:
+            DoCastVictim(FerraSpells::SPELL_MAUL);
+            events.Repeat(urandc(15s, 20s));
+            break;
+        case FerraEvents::IllyanaCombatCheck:
+            //Like illyana we check to make sure illyana is in combat if ferra is
+            //TODO: Consolidate duplicate code shared between this hack to make linked bosses stay in combat no matter what.
+            if (Creature* ill = this->instance->GetCreature(DMDataTypes::Illyanna_Ravenoak))
+            {
+                //Check if in combat to prevent split pulling exploits
+                if (!ill->IsInCombat())
+                    ill->AI()->DoZoneInCombat();
+
+                //Reschedule a check to make sure Ferra stays in combat the whole time.
+                events.Repeat(1s);
+            }
+            else
+            {
+                sLog->outCommand(0, "Unable to find creature ill.");
+                events.Repeat(300ms);
+            }
+            break;
+        }
+    }
 };
 
 void AddSC_boss_illyanna_ravenoak()
 {
     RegisterCreatureAIWithFactory(boss_illyanna_ravenoak, GetDireMaulAI);
+    RegisterCreatureAIWithFactory(boss_ferra, GetDireMaulAI);
 }

@@ -15,7 +15,8 @@
 //TODO: Flesh out the new creature/gameobject stuff that instances like BlackTemple use.
 ObjectData const creatureData[] =
 {
-    { DireMaulNpcEntry::NPC_FERRA , DMDataTypes::Ferra },
+    { DireMaulNpcEntry::NPC_FERRA, DMDataTypes::Ferra },
+    { DireMaulBossEntry::NPC_ILLYANA, DMDataTypes::Illyanna_Ravenoak },
     { 0, 0 } // END
 };
 

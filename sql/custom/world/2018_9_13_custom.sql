@@ -12,4 +12,6 @@ UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_tendris_warpwood'
 -- Changing Illyana from SmartAI to BossAI
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_illyanna_ravenoak' WHERE `entry`='11488';
 
+UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_ferra' WHERE `entry`='14308';
+
 
