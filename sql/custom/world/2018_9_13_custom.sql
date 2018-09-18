@@ -8,3 +8,8 @@ UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_prince_tortheldri
 
 -- Changing Tendris from smartAI to BossAI
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_tendris_warpwood' WHERE `entry`='11489';
+
+-- Changing Illyana from SmartAI to BossAI
+UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_illyanna_ravenoak' WHERE `entry`='11488';
+
+

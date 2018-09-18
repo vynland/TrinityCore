@@ -69,6 +69,7 @@ enum DireMaulNpcEntry
     NPC_ARCANE_ABERRATION = 11480,
     NPC_TENDRIS_PROTECTOR = 11459,
     NPC_MIZZLE_THE_CRAFTY = 14353,
+    NPC_FERRA = 14308
 };
 
 enum DireMaulBossEntry

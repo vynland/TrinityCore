@@ -113,6 +113,7 @@ void AddSC_winterspring();
 void AddSC_boss_immol_thar();
 void AddSC_boss_prince_tortheldrin();
 void AddSC_boss_tendris_warpwood();
+void AddSC_boss_illyanna_ravenoak();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -215,4 +216,5 @@ void AddKalimdorScripts()
     AddSC_boss_immol_thar();
     AddSC_boss_prince_tortheldrin();
     AddSC_boss_tendris_warpwood();
+    AddSC_boss_illyanna_ravenoak();
 }
