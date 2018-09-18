@@ -32,7 +32,7 @@ enum IllyannaEvents
 struct boss_illyanna_ravenoak : public BossAI
 {
 public:
-    boss_illyanna_ravenoak(Creature* creature) : BossAI(creature, DireMaulBossIndex::Illyanna_Ravenoak) { }
+    boss_illyanna_ravenoak(Creature* creature) : BossAI(creature, DMDataTypes::Illyanna_Ravenoak) { }
 
     void JustEngagedWith(Unit* /*who*/) override
     {
@@ -47,6 +47,12 @@ public:
         events.ScheduleEvent(IllyannaEvents::FerraCombatCheck, 300ms); //we should check as soon as we are pulled
 
         this->DoZoneInCombat(); //this will help mitigate against split pulling ferra and illyana
+    }
+
+    void Reset() override
+    {
+        //If we reset we should check Ferra state.
+        //Ferra will need to be respawned if we are alive and ferra is dead
     }
 
     void ExecuteEvent(uint32 eventId) override
@@ -88,10 +94,8 @@ public:
                 events.Repeat(500ms); //if it fails we should retry, don't put on CD.
             break;
         case IllyannaEvents::FerraCombatCheck:
-            if (Creature* ferra = this->instance->GetCreature(DireMaulNpcEntry::NPC_FERRA))
+            if (Creature* ferra = this->instance->GetCreature(DMDataTypes::Ferra))
             {
-                ferra->Talk("Testing aggro check.", ChatMsg::CHAT_MSG_MONSTER_SAY, Language::LANG_UNIVERSAL, 100, nullptr);
-
                 //Check if in combat to prevent split pulling exploits
                 if (!ferra->IsInCombat())
                     ferra->AI()->DoZoneInCombat();

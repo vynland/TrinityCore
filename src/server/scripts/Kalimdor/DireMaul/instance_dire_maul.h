@@ -10,7 +10,7 @@
 #include "Log.h"
 #include "GameObject.h"
 
-enum DireMaulBossIndex
+enum DMDataTypes
 {
     Pusillin = 0,
     Lethtendris = 1,
@@ -31,6 +31,9 @@ enum DireMaulBossIndex
     Guard_Slip_kik = 14,
     Captain_Kromcrush = 15,
     King_Gordok = 16,
+
+    //Additional data entries
+    Ferra = 17
 };
 
 enum DireMaulGameObjectEntry

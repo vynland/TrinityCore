@@ -32,7 +32,7 @@ enum TortheldrinEvent
 struct boss_prince_tortheldrin : public BossAI
 {
 public:
-    boss_prince_tortheldrin(Creature* creature) : BossAI(creature, DireMaulBossIndex::Prince_Tortheldrin) { }
+    boss_prince_tortheldrin(Creature* creature) : BossAI(creature, DMDataTypes::Prince_Tortheldrin) { }
 
     void JustEngagedWith(Unit* who) override
     {

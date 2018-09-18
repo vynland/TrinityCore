@@ -12,6 +12,19 @@
 #include "GameObject.h"
 #include "ImprovedInstanceScript.h"
 
+//TODO: Flesh out the new creature/gameobject stuff that instances like BlackTemple use.
+ObjectData const creatureData[] =
+{
+    { DireMaulNpcEntry::NPC_FERRA , DMDataTypes::Ferra },
+    { 0, 0 } // END
+};
+
+ObjectData const gameObjectData[] =
+{
+    { 0, 0 } //END
+};
+
+
 class instance_dire_maul : public InstanceMapScript
 {
 public:
@@ -29,6 +42,7 @@ public:
         instance_dire_maul_InstanceMapScript(Map* map) : ImprovedInstanceScript(map)
         {
             SetBossNumber(DIREMAUL_BOSS_COUNT);
+            LoadObjectData(creatureData, gameObjectData);
 
             //RegisterOnBossCreatureDeathEvent(DireMaulBossEntry::NPC_TENDRIS, &instance_dire_maul_InstanceMapScript::OnTendrisDeath);
 

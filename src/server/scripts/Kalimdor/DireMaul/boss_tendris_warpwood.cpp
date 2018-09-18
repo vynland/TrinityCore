@@ -35,7 +35,7 @@ struct boss_tendris_warpwood : public BossAI
 {
 public:
     boss_tendris_warpwood(Creature* creature)
-        : BossAI(creature, DireMaulBossIndex::Tendris_Warpwood), isEnraged(false)
+        : BossAI(creature, DMDataTypes::Tendris_Warpwood), isEnraged(false)
     {
     }
 

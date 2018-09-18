@@ -33,7 +33,7 @@ enum ImmotharEvent
 struct boss_immol_thar : public BossAI
 {
 public:
-    boss_immol_thar(Creature* creature) : BossAI(creature, DireMaulBossIndex::Immol_thar) { }
+    boss_immol_thar(Creature* creature) : BossAI(creature, DMDataTypes::Immol_thar) { }
 
     void JustEngagedWith(Unit* /*who*/) override
     {
