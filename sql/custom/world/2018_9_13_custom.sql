@@ -15,3 +15,7 @@ UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_illyanna_ravenoak
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_ferra' WHERE `entry`='14308';
 
 
+-- Pullsin
+UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_pusillin' WHERE `entry`='14354';
+
+

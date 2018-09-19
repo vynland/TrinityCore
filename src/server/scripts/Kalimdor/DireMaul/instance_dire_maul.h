@@ -72,7 +72,8 @@ enum DireMaulNpcEntry
     NPC_ARCANE_ABERRATION = 11480,
     NPC_TENDRIS_PROTECTOR = 11459,
     NPC_MIZZLE_THE_CRAFTY = 14353,
-    NPC_FERRA = 14308
+    NPC_FERRA = 14308,
+    NPC_IMP_SPAWN = 13276
 };
 
 enum DireMaulBossEntry
@@ -81,6 +82,7 @@ enum DireMaulBossEntry
     NPC_OLD_IRONBARK = 11491,
     NPC_ZEVRIM = 11490,
     NPC_ALZZIN = 11492,
+    NPC_PUSILLIN = 14354,
 
     // DM West
     NPC_IMMOL_THAR_GARDIEN = 11466,
