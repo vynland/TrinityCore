@@ -160,6 +160,7 @@ public:
         return true;
     }
 
+    //basically BossAI::Reset without summon despawn
     void Reset() override
     {
         if (!me->IsAlive())
@@ -178,6 +179,16 @@ public:
         //Cast recast Runn Tumm. He should have it all the time I think.
         me->SetObjectScale(0.7f);
         DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
+    }
+
+    //basically BossAI::JustDied without summon despawn
+    void JustDied(Unit* /*killer*/) override
+    {
+        events.Reset();
+        summons.DespawnAll();
+        scheduler.CancelAll();
+        if (instance)
+            instance->SetBossState(DMDataTypes::Pusillin, DONE);
     }
 
     void JustEngagedWith(Unit* who) override
