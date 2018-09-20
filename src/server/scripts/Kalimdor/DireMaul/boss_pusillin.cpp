@@ -217,9 +217,10 @@ public:
 
         events.ScheduleEvent(PusillinEvent::RandomCastEvent, 0);
 
-        //Check Runn Tumm buff, rebuff if we don't have it. This should be the correct behavior I think
-        if(!me->HasAura(PusillinSpell::SPELL_RUNNTUM))
-            DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
+        SetPusillinCombatStates();
+
+        //To prevent split pulling we should engage all of his summoned imps
+        summons.DoZoneInCombat();
     }
 
     void ExecuteEvent(uint32 eventId) override
