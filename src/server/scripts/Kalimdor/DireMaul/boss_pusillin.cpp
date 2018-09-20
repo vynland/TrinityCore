@@ -160,11 +160,35 @@ public:
         return true;
     }
 
+    void Reset() override
+    {
+        if (!me->IsAlive())
+            return;
+
+        me->SetCombatPulseDelay(0);
+        me->ResetLootMode();
+        events.Reset();
+
+        //We don't despawn all the summons because that would change the META on him, to pull and then feign death or something.
+        //summons.DespawnAll();
+        scheduler.CancelAll();
+        if (instance && instance->GetBossState(DMDataTypes::Pusillin) != DONE)
+            instance->SetBossState(DMDataTypes::Pusillin, NOT_STARTED);
+
+        //Cast recast Runn Tumm. He should have it all the time I think.
+        me->SetObjectScale(0.7f);
+        DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
+    }
+
     void JustEngagedWith(Unit* who) override
     {
         BossAI::JustEngagedWith(who);
 
         events.ScheduleEvent(PusillinEvent::RandomCastEvent, 0);
+
+        //Check Runn Tumm buff, rebuff if we don't have it. This should be the correct behavior I think
+        if(!me->HasAura(PusillinSpell::SPELL_RUNNTUM))
+            DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
     }
 
     void ExecuteEvent(uint32 eventId) override
@@ -234,6 +258,7 @@ public:
             DoCastSelf(22735, CastSpellExtraArgs(true)); // Spirit of Runn Tum
             SpawnImps();
             SetAllImpsAttackTargetPlayer(player);
+            me->Attack(player, true); //make the imp attack right away.
             break;
         }
 
