@@ -115,6 +115,7 @@ void AddSC_boss_prince_tortheldrin();
 void AddSC_boss_tendris_warpwood();
 void AddSC_boss_illyanna_ravenoak();
 void AddSC_boss_pusillin();
+void AddSC_boss_zevrim();
 
 // The name of this function should match:
 // void Add${NameOfDirectory}Scripts()
@@ -219,4 +220,5 @@ void AddKalimdorScripts()
     AddSC_boss_tendris_warpwood();
     AddSC_boss_illyanna_ravenoak();
     AddSC_boss_pusillin();
+    AddSC_boss_zevrim();
 }

@@ -125,8 +125,6 @@ Movement::PointsArray const pusillinWayPoints4 =
 struct boss_pusillin : public BossAI
 {
 public:
-    
-
     boss_pusillin(Creature* creature)
         : BossAI(creature, DMDataTypes::Pusillin), State(PusillinState::InitialStart)
     {

@@ -19,3 +19,7 @@ UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_ferra' WHERE `ent
 UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_pusillin' WHERE `entry`='14354';
 
 
+-- Zevrim
+UPDATE `creature_template` SET `AIName`='', `ScriptName`='boss_zevrim' WHERE `entry`='11490';
+
+
