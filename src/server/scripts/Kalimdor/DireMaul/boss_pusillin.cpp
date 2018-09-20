@@ -20,7 +20,8 @@ enum PusillinState
     EventPoint_1 = 1,
     EventPoint_2 = 2,
     EventPoint_3 = 3,
-    EventPoint_4 = 4
+    EventPoint_4 = 4,
+    CombatState = 5
 };
 
 enum PusillinMenuId
@@ -177,15 +178,34 @@ public:
             instance->SetBossState(DMDataTypes::Pusillin, NOT_STARTED);
 
         //Cast recast Runn Tumm. He should have it all the time I think.
-        me->SetObjectScale(0.7f);
-        DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
+        SetPusillinCombatStates();
+    }
+
+    //Only does anything if in combat state
+    void SetPusillinCombatStates()
+    {
+        if (State >= PusillinState::CombatState)
+        {
+            me->SetObjectScale(0.7f);
+            DoCastSelf(PusillinSpell::SPELL_RUNNTUM, CastSpellExtraArgs(true));
+        }
+    }
+
+    void JustReachedHome() override
+    {
+        BossAI::JustReachedHome();
+
+        //Cast recast Runn Tumm. He should have it all the time I think.
+        SetPusillinCombatStates();
     }
 
     //basically BossAI::JustDied without summon despawn
     void JustDied(Unit* /*killer*/) override
     {
         events.Reset();
-        summons.DespawnAll();
+
+        //Don't remove imps
+        //summons.DespawnAll();
         scheduler.CancelAll();
         if (instance)
             instance->SetBossState(DMDataTypes::Pusillin, DONE);
@@ -265,11 +285,11 @@ public:
             me->SetHomePosition(18.19f, -701.15f, -12.64f, 0);
             me->Say(PusillinText::Response_5);
             me->SetFaction(14);
-            me->SetObjectScale(0.7f);
-            DoCastSelf(22735, CastSpellExtraArgs(true)); // Spirit of Runn Tum
+            SetPusillinCombatStates();
             SpawnImps();
             SetAllImpsAttackTargetPlayer(player);
             me->Attack(player, true); //make the imp attack right away.
+            State = PusillinState::CombatState;
             break;
         }
 
