@@ -23,15 +23,6 @@ enum PusillinState
     EventPoint_4 = 4
 };
 
-enum PusillinGossipResponse
-{
-    Player_Gossip_1 = 9352,
-    Player_Gossip_2 = 9355,
-    Player_Gossip_3 = 9356,
-    Player_Gossip_4 = 9359,
-    Player_Gossip_5 = 9362
-
-};
 enum PusillinMenuId
 {
     Menu_1 = 6877,
@@ -48,6 +39,24 @@ enum PusillinText
     Response_3 = 9357,
     Response_4 = 9360,
     Response_5 = 9363
+};
+
+enum PusillinEvent
+{
+    RandomCastEvent = 1,
+    RANDOM_SPELL_START_VALUE = 2,
+    FireBallEvent = 2,
+    FireBlastEvent = 3,
+    BlastWaveEvent = 4,
+    RANDOM_SPELL_END_VALUE = 4,
+};
+
+enum PusillinSpell
+{
+    SPELL_FIREBALL = 15228,
+    SPELL_FIREBLAST = 14145,
+    SPELL_BLASTWAVE = 22424,
+    SPELL_RUNNTUM = 22735
 };
 
 int const IMP_CREATURE_SPAWN_COUNT = 5;
@@ -149,6 +158,48 @@ public:
 
         //TODO: What is this?
         return true;
+    }
+
+    void JustEngagedWith(Unit* who) override
+    {
+        BossAI::JustEngagedWith(who);
+
+        events.ScheduleEvent(PusillinEvent::RandomCastEvent, 0);
+    }
+
+    void ExecuteEvent(uint32 eventId) override
+    {
+        HandlePusillinEvents(static_cast<PusillinEvent>(eventId));
+    }
+
+    void HandlePusillinEvents(PusillinEvent eventId)
+    {
+        //TODO: Current behavior means the cast at the last second can be LoS'd, and it won't recast and will still be put on CD. How should we deal with that?
+        switch (eventId)
+        {
+        case PusillinEvent::RandomCastEvent:
+            //The way Pusillin's casts work is we randomly schedule a cast event based on what we roll
+            //this event only calculates what we will cast, it does not cast it.
+            events.ScheduleEvent(urand(PusillinEvent::RANDOM_SPELL_START_VALUE, PusillinEvent::RANDOM_SPELL_END_VALUE), 0s);
+            break;
+        case PusillinEvent::FireBallEvent:
+            PusillinSpellCast(PusillinSpell::SPELL_FIREBALL, 6s);
+            break;
+        case PusillinEvent::FireBlastEvent:
+            PusillinSpellCast(PusillinSpell::SPELL_FIREBLAST, 4s);
+            break;
+        case PusillinEvent::BlastWaveEvent:
+            PusillinSpellCast(PusillinSpell::SPELL_BLASTWAVE, 9s);
+            break;
+        default:
+            break;
+        }
+    }
+
+    void PusillinSpellCast(PusillinSpell spell, std::chrono::seconds cooldownTime)
+    {
+        DoCastVictim(spell);
+        events.ScheduleEvent(PusillinEvent::RandomCastEvent, cooldownTime);
     }
 
     void SendPusillinGossip(Player* player, PusillinMenuId menu)
